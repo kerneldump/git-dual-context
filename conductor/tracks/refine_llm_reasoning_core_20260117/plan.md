@@ -12,7 +12,7 @@
 - [x] Task: Update LLM System Prompt. b753d06
     - [ ] Modify prompt template to explicitly define criteria for High, Medium, and Low.
     - [ ] Instruction: Use "Medium" if commit touches relevant files/vars but lacks obvious flaws.
-- [ ] Task: Update Parsing Logic.
+- [x] Task: Update Parsing Logic. 84777f9
     - [ ] Update regex/parsing to detect "Prob: Medium" (case-insensitive).
     - [ ] Ensure fallback to "Low" on parsing failure.
 - [ ] Task: Update CLI Output.
