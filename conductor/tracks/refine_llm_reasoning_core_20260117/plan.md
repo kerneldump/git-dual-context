@@ -2,7 +2,7 @@
 
 ## Phase 1: Analysis & Prompt Engineering
 - [x] Task: Audit current prompts in `internal/analyzer` and identify areas for improvement. bd2f800
-- [ ] Task: Research and implement "Chain-of-Thought" prompting techniques for better code reasoning.
+- [x] Task: Research and implement "Chain-of-Thought" prompting techniques for better code reasoning. a60a696
 - [ ] Task: Create a set of "Micro" and "Macro" diff examples to use for iterative prompt testing.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Analysis & Prompt Engineering' (Protocol in workflow.md)
 
