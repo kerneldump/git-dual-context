@@ -14,10 +14,35 @@ import (
 	"github.com/google/generative-ai-go/genai"
 )
 
+// Probability represents the likelihood of a commit causing a bug
+type Probability string
+
+const (
+	ProbHigh   Probability = "HIGH"
+	ProbMedium Probability = "MEDIUM"
+	ProbLow    Probability = "LOW"
+)
+
+func (p *Probability) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	switch strings.ToUpper(s) {
+	case "HIGH":
+		*p = ProbHigh
+	case "MEDIUM", "MED":
+		*p = ProbMedium
+	default:
+		*p = ProbLow
+	}
+	return nil
+}
+
 // AnalysisResult represents the JSON output from the LLM
 type AnalysisResult struct {
-	Probability string `json:"probability"` // High, Low, Unknown
-	Reasoning   string `json:"reasoning"`
+	Probability Probability `json:"probability"`
+	Reasoning   string      `json:"reasoning"`
 }
 
 // AnalyzeCommit performs the dual-context analysis on a single commit
