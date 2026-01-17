@@ -9,7 +9,7 @@
 ## Phase 2: Core Engine Refinement (3-Tier Classification)
 - [x] Task: Update Data Structures to support "Medium" probability. d67287a
     - [ ] Modify `AnalysisResult` (or equivalent) to use an Enum or normalized string for High/Medium/Low.
-- [ ] Task: Update LLM System Prompt.
+- [x] Task: Update LLM System Prompt. b753d06
     - [ ] Modify prompt template to explicitly define criteria for High, Medium, and Low.
     - [ ] Instruction: Use "Medium" if commit touches relevant files/vars but lacks obvious flaws.
 - [ ] Task: Update Parsing Logic.
