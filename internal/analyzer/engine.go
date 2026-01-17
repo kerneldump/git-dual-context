@@ -46,10 +46,11 @@ func (p *Probability) UnmarshalJSON(b []byte) error {
 type AnalysisResult struct {
 	Probability Probability `json:"probability"`
 	Reasoning   string      `json:"reasoning"`
+	Skipped     bool        `json:"-"`
 }
 
 // AnalyzeCommit performs the dual-context analysis on a single commit
-func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, headHash plumbing.Hash, errorMsg string, model *genai.GenerativeModel) (string, error) {
+func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, headHash plumbing.Hash, errorMsg string, model *genai.GenerativeModel) (*AnalysisResult, error) {
 	// 1. Standard Diff (C vs Parent)
 	// For the very first commit, parent is empty. Handle gracefully.
 	var parent *object.Commit
@@ -59,22 +60,22 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, hea
 
 	stdDiff, modifiedFiles, err := gitdiff.GetStandardDiff(c, parent)
 	if err != nil {
-		return "", fmt.Errorf("getting standard diff: %w", err)
+		return nil, fmt.Errorf("getting standard diff: %w", err)
 	}
 
 	if len(modifiedFiles) == 0 {
-		return fmt.Sprintf("Commit %s: [Skipped - No relevant code changes]\n", c.Hash.String()[:8]), nil
+		return &AnalysisResult{Skipped: true}, nil
 	}
 
 	// 2. Full Comparison Diff (C vs HEAD), filtered by modifiedFiles
 	headCommit, err := r.CommitObject(headHash)
 	if err != nil {
-		return "", fmt.Errorf("getting HEAD commit: %w", err)
+		return nil, fmt.Errorf("getting HEAD commit: %w", err)
 	}
 
 	fullDiff, err := gitdiff.GetFullDiff(c, headCommit, modifiedFiles)
 	if err != nil {
-		return "", fmt.Errorf("getting full diff: %w", err)
+		return nil, fmt.Errorf("getting full diff: %w", err)
 	}
 
 	// 3. Construct Prompt
@@ -83,11 +84,11 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, hea
 	// 4. Call Gemini
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
-		return "", fmt.Errorf("gemini api call: %w", err)
+		return nil, fmt.Errorf("gemini api call: %w", err)
 	}
 
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return "", fmt.Errorf("empty response from gemini")
+		return nil, fmt.Errorf("empty response from gemini")
 	}
 
 	// Parse Response
@@ -97,22 +98,17 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, hea
 			cleanTxt := jsonRegex.FindString(string(txt))
 			if cleanTxt == "" {
 				// Fallback if no JSON found
-				return "", fmt.Errorf("no JSON found in response for %s", c.Hash.String()[:8])
+				return nil, fmt.Errorf("no JSON found in response for %s", c.Hash.String()[:8])
 			}
 			if err := json.Unmarshal([]byte(cleanTxt), &result); err != nil {
-				return "", fmt.Errorf("parsing JSON for %s: %v. Raw: %s", c.Hash.String()[:8], err, string(txt))
+				return nil, fmt.Errorf("parsing JSON for %s: %v. Raw: %s", c.Hash.String()[:8], err, string(txt))
 			}
 		}
 	}
 
-	// Format Output
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Commit: %s | Prob: %s\n", c.Hash.String()[:8], result.Probability))
-	sb.WriteString(fmt.Sprintf("Reason: %s\n", result.Reasoning))
-	sb.WriteString("---------------------------------------------------\n")
-
-	return sb.String(), nil
+	return &result, nil
 }
+
 
 func buildPrompt(errorMsg string, c *object.Commit, stdDiff, fullDiff string) string {
 	return fmt.Sprintf(`
