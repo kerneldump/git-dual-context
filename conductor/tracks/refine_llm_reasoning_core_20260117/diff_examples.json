@@ -1,0 +1,41 @@
+[
+  {
+    "id": "example_high_prob",
+    "description": "A commit that directly introduces a bug by removing a null check.",
+    "bug_report": "Panic: runtime error: invalid memory address or nil pointer dereference in ProcessUser.",
+    "commit": {
+      "hash": "a1b2c3d4",
+      "message": "refactor: simplify user processing logic"
+    },
+    "micro_diff": "@@ -10,5 +10,3 @@ func ProcessUser(u *User) {\n-    if u == nil {\n-        return\n-    }\n     fmt.Println(u.Name)\n }",
+    "macro_diff": "@@ -10,5 +10,3 @@ func ProcessUser(u *User) {\n-    if u == nil {\n-        return\n-    }\n     fmt.Println(u.Name)\n }",
+    "expected_classification": "HIGH",
+    "expected_reasoning": "The commit explicitly removes the nil check for 'u' immediately before accessing 'u.Name', which directly causes the nil pointer dereference reported in the bug."
+  },
+  {
+    "id": "example_medium_prob",
+    "description": "A commit that modifies the relevant function but doesn't have an obvious bug.",
+    "bug_report": "User processing is slower than expected.",
+    "commit": {
+      "hash": "e5f6g7h8",
+      "message": "perf: optimize user processing loop"
+    },
+    "micro_diff": "@@ -12,3 +12,3 @@ func ProcessUser(u *User) {\n-    for i := 0; i < 100; i++ {\n+    for i := 0; i < 1000; i++ {\n         DoWork(u)\n     }\n }",
+    "macro_diff": "@@ -12,3 +12,3 @@ func ProcessUser(u *User) {\n-    for i := 0; i < 100; i++ {\n+    for i := 0; i < 1000; i++ {\n         DoWork(u)\n     }\n }",
+    "expected_classification": "MEDIUM",
+    "expected_reasoning": "The commit increases the loop count from 100 to 1000 in 'ProcessUser', which relates to the performance issue. However, without knowing the cost of 'DoWork', it's not guaranteed to be the root cause, but it is highly suspicious and requires manual review."
+  },
+  {
+    "id": "example_low_prob",
+    "description": "A commit that changes documentation.",
+    "bug_report": "Panic in ProcessUser.",
+    "commit": {
+      "hash": "i9j0k1l2",
+      "message": "docs: update comments for ProcessUser"
+    },
+    "micro_diff": "@@ -8,1 +8,1 @@\n-// ProcessUser processes the user\n+// ProcessUser handles user data processing\n func ProcessUser(u *User) {",
+    "macro_diff": "@@ -8,1 +8,1 @@\n-// ProcessUser processes the user\n+// ProcessUser handles user data processing\n func ProcessUser(u *User) {",
+    "expected_classification": "LOW",
+    "expected_reasoning": "The commit only updates comments and does not touch executable code. It cannot cause a panic."
+  }
+]
