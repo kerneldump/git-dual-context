@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"git-commit-analysis/internal/analyzer"
 
@@ -81,10 +82,11 @@ func main() {
 	}
 	defer client.Close()
 
-	model := client.GenerativeModel("models/gemini-1.5-flash")
-	model.ResponseMIMEType = "application/json"
+	model := client.GenerativeModel("models/gemini-3-pro-preview")
+	// model.ResponseMIMEType = "application/json" // Removed as it causes hangs with this model
 
 	// Iterate Commits
+	cIter, err := r.Log(&git.LogOptions{From: headRef.Hash()})
 	cIter, err := r.Log(&git.LogOptions{From: headRef.Hash()})
 	if err != nil {
 		log.Fatalf("Failed to get commit log: %v", err)
@@ -139,8 +141,12 @@ func main() {
 			defer wg.Done()
 			defer func() { <-sem }()
 
+			// Create a context with timeout for each request
+			reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
+
 			// Analyze
-			res, err := analyzer.AnalyzeCommit(ctx, r, c, headRef.Hash(), *errorMsg, model)
+			res, err := analyzer.AnalyzeCommit(reqCtx, r, c, headRef.Hash(), *errorMsg, model)
 
 			resultsMutex.Lock()
 			allResults = append(allResults, commitResult{c, res, err})
