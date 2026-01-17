@@ -10,14 +10,14 @@ By synthesizing these two signals, the tool can identify "sleeper bugs"—issues
 
 ---
 
-## 📖 The Theory
+## The Theory
 
 This tool is the reference implementation for the paper:  
 **[Enhanced Bug Diagnosis via Dual-Context Diff Analysis](docs/GitCommitAnalysis.md)**
 
 > *Traditionally, debugging focuses on "What did this commit change?". Use this tool when you need to answer: "How does this commit interact with the current state of the world?"*
 
-## ✨ Features
+## Features
 
 -   **Automated Hypothesis Testing:** Automatically scans the last `N` commits to calculate the probability ($P(H_k|E)$) that a specific commit caused a given bug.
 -   **Dual-Context Analysis:**
@@ -26,7 +26,7 @@ This tool is the reference implementation for the paper:
 -   **LLM Integration:** Uses Google's Gemini Pro to act as the reasoning engine for probabilistic inference.
 -   **Smart Filtering:** Automatically excludes lock files, documentation, and tests to focus on logic changes and conserve tokens.
 
-## 🚀 Usage
+## Usage
 
 ### Prerequisites
 
@@ -71,7 +71,7 @@ go build -o git-commit-analysis ./cmd/git-commit-analysis
 | `-j` | Number of concurrent workers | `3` |
 | `-apikey` | Gemini API Key (Alternative to ENV var) | `""` |
 
-## 📊 Example Output
+## Example Output
 
 Diagnosing a runtime error in `signal-sentry`:
 
@@ -91,11 +91,11 @@ Reason: Only updates Markdown documentation.
 ---------------------------------------------------
 ```
 
-## ⚠️ Limitations & Notes
+## Limitations & Notes
 
 -   **Token Usage:** Analyzing large commits or many files consumes significant context. The tool attempts to filter irrelevant files (`.lock`, `_test.go`), but be mindful of costs.
 -   **Rate Limits:** The tool processes commits concurrently (default: 3 workers). If you hit API rate limits, consider reducing `N` or adding retry logic.
 
-## 📄 License
+## License
 
 [MIT](LICENSE)
