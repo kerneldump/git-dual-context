@@ -75,33 +75,7 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, hea
 	}
 
 	// 3. Construct Prompt
-	prompt := fmt.Sprintf(`
-
-You are an expert software debugger performing a "Dual-Context Diff Analysis".
-Your goal is to determine the probability that the following commit introduced the bug described below.
-
-BUG DESCRIPTION:
-%s
-
-COMMIT INFO:
-Hash: %s
-Message: %s
-
-ANALYSIS DATA:
-1. STANDARD DIFF (Changes made in this commit):
-%s
-
-2. FULL COMPARISON DIFF (Evolution of these specific files from this commit to HEAD):
-%s
-
-INSTRUCTIONS:
-- Analyze the Standard Diff to understand what changed.
-- Analyze the Full Comparison Diff to see if those changes were reverted, modified, or if they interact badly with current code.
-- Ignore test files unless the bug is in a test.
-- Provide a probability (High, Low, Unknown) and a concise reasoning.
-
-Return JSON: { "probability": "High|Low|Unknown", "reasoning": "string" }
-`, errorMsg, c.Hash.String(), c.Message, stdDiff, fullDiff)
+	prompt := buildPrompt(errorMsg, c, stdDiff, fullDiff)
 
 	// 4. Call Gemini
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
@@ -134,3 +108,55 @@ Return JSON: { "probability": "High|Low|Unknown", "reasoning": "string" }
 
 	return sb.String(), nil
 }
+
+func buildPrompt(errorMsg string, c *object.Commit, stdDiff, fullDiff string) string {
+	return fmt.Sprintf(`
+You are an expert software debugger. Your task is to analyze a specific commit to determine if it introduced the bug described below.
+
+BUG DESCRIPTION:
+%s
+
+COMMIT CONTEXT:
+Hash: %s
+Message: %s
+
+---
+INPUT DATA:
+
+1. STANDARD DIFF (The immediate changes in this commit):
+%s
+
+2. FULL COMPARISON DIFF (Evolution from this commit to HEAD):
+%s
+
+---
+INSTRUCTIONS:
+
+Use the following "Chain of Thought" process to analyze the data. You must output your reasoning for each step.
+
+STEP 1: MICRO-ANALYSIS
+Analyze the Standard Diff. What logic changed? Does it look risky?
+
+STEP 2: MACRO-ANALYSIS
+Analyze the Full Comparison Diff. Does the code from this commit still exist in HEAD? Was it refactored? Does it conflict with the current system state?
+
+STEP 3: CLASSIFICATION
+Classify the probability based on these strict definitions:
+- HIGH: The commit contains logic that DIRECTLY contradicts the error message or introduces the specific bug (a "smoking gun").
+- MEDIUM: The commit modifies the relevant subsystem or variables, but the logic is not clearly broken. Warrants manual review.
+- LOW: The commit is unrelated (docs, assets, different subsystem, safe refactor).
+
+---
+OUTPUT FORMAT:
+
+Reasoning: <Your Step-by-Step Chain of Thought Analysis>
+Classification: <HIGH|MEDIUM|LOW>
+
+Finally, return the result in this JSON format (do not use markdown blocks):
+{
+  "probability": "HIGH|MEDIUM|LOW",
+  "reasoning": "A concise summary of your analysis."
+}
+`, errorMsg, c.Hash.String(), c.Message, stdDiff, fullDiff)
+}
+
