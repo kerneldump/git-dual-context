@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"git-commit-analysis/internal/gitdiff"
@@ -13,6 +14,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/generative-ai-go/genai"
 )
+
+var jsonRegex = regexp.MustCompile(`(?s)\{.*\}`)
 
 // Probability represents the likelihood of a commit causing a bug
 type Probability string
@@ -91,10 +94,12 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, hea
 	var result AnalysisResult
 	for _, part := range resp.Candidates[0].Content.Parts {
 		if txt, ok := part.(genai.Text); ok {
-			// Basic cleanup if markdown blocks are returned
-			cleanTxt := strings.TrimPrefix(strings.TrimSuffix(string(txt), "```"), "```json")
+			cleanTxt := jsonRegex.FindString(string(txt))
+			if cleanTxt == "" {
+				// Fallback if no JSON found
+				return "", fmt.Errorf("no JSON found in response for %s", c.Hash.String()[:8])
+			}
 			if err := json.Unmarshal([]byte(cleanTxt), &result); err != nil {
-				// Fallback if not pure JSON
 				return "", fmt.Errorf("parsing JSON for %s: %v. Raw: %s", c.Hash.String()[:8], err, string(txt))
 			}
 		}

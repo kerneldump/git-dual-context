@@ -63,3 +63,26 @@ func TestBuildPrompt(t *testing.T) {
 		}
 	}
 }
+
+func TestNoisyJSONParsing(t *testing.T) {
+	input := `
+Some reasoning steps here.
+STEP 1: ...
+STEP 2: ...
+{
+  "probability": "MEDIUM",
+  "reasoning": "noisy response test"
+}
+`
+	cleanTxt := jsonRegex.FindString(input)
+	var res AnalysisResult
+	if err := json.Unmarshal([]byte(cleanTxt), &res); err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+	if res.Probability != ProbMedium {
+		t.Errorf("expected MEDIUM, got %v", res.Probability)
+	}
+	if res.Reasoning != "noisy response test" {
+		t.Errorf("expected 'noisy response test', got %v", res.Reasoning)
+	}
+}
