@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Refine LLM Reasoning Core**
+- [x] **Track: Refine LLM Reasoning Core**
   *Link: [./tracks/refine_llm_reasoning_core_20260117/](./tracks/refine_llm_reasoning_core_20260117/)*
