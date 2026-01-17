@@ -1,6 +1,6 @@
 # Implementation Plan - Refine LLM Reasoning Core
 
-## Phase 1: Analysis & Prompt Engineering
+## Phase 1: Analysis & Prompt Engineering [checkpoint: efbc22e]
 - [x] Task: Audit current prompts in `internal/analyzer` and identify areas for improvement. bd2f800
 - [x] Task: Research and implement "Chain-of-Thought" prompting techniques for better code reasoning. a60a696
 - [x] Task: Create a set of "Micro" and "Macro" diff examples to use for iterative prompt testing. 678cd92
