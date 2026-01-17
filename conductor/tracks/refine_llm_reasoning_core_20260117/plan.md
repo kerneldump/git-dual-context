@@ -7,7 +7,7 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Analysis & Prompt Engineering' (Protocol in workflow.md)
 
 ## Phase 2: Core Engine Refinement (3-Tier Classification)
-- [ ] Task: Update Data Structures to support "Medium" probability.
+- [x] Task: Update Data Structures to support "Medium" probability. d67287a
     - [ ] Modify `AnalysisResult` (or equivalent) to use an Enum or normalized string for High/Medium/Low.
 - [ ] Task: Update LLM System Prompt.
     - [ ] Modify prompt template to explicitly define criteria for High, Medium, and Low.
