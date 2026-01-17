@@ -87,7 +87,6 @@ func main() {
 
 	// Iterate Commits
 	cIter, err := r.Log(&git.LogOptions{From: headRef.Hash()})
-	cIter, err := r.Log(&git.LogOptions{From: headRef.Hash()})
 	if err != nil {
 		log.Fatalf("Failed to get commit log: %v", err)
 	}
