@@ -6,7 +6,7 @@
 - [x] Task: Create a set of "Micro" and "Macro" diff examples to use for iterative prompt testing. 678cd92
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Analysis & Prompt Engineering' (Protocol in workflow.md)
 
-## Phase 2: Core Engine Refinement (3-Tier Classification)
+## Phase 2: Core Engine Refinement (3-Tier Classification) [checkpoint: 9d45ba2]
 - [x] Task: Update Data Structures to support "Medium" probability. d67287a
     - [ ] Modify `AnalysisResult` (or equivalent) to use an Enum or normalized string for High/Medium/Low.
 - [x] Task: Update LLM System Prompt. b753d06
