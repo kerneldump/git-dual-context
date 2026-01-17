@@ -15,7 +15,7 @@
 - [x] Task: Update Parsing Logic. 84777f9
     - [ ] Update regex/parsing to detect "Prob: Medium" (case-insensitive).
     - [ ] Ensure fallback to "Low" on parsing failure.
-- [ ] Task: Update CLI Output.
+- [x] Task: Update CLI Output. 18856c6
     - [ ] Format output labels (e.g., `[MED]` or `Prob: Medium`).
     - [ ] Apply color coding (Red=High, Yellow=Medium, Green/Gray=Low).
     - [ ] Ensure sorting order is High -> Medium -> Low.
