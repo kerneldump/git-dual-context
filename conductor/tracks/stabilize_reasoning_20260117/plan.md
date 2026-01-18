@@ -5,9 +5,9 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Deterministic Model Configuration' (Protocol in workflow.md)
 
 ## Phase 2: Reasoning Engine & Prompt Refinement
-- [ ] Task: Update `buildPrompt` in `internal/analyzer/engine.go` to include the **Skeptic Persona** and the **Global Value Tracing** instruction.
-- [ ] Task: Add the **Hypothesis Generation** step to the prompt template, requiring the model to analyze the bug description before the commit.
-- [ ] Task: Update unit tests in `internal/analyzer/engine_test.go` to ensure the new prompt sections (Skeptic, Hypothesis, Tracing) are present in the generated string.
+- [x] Task: Update `buildPrompt` in `internal/analyzer/engine.go` to include the **Skeptic Persona** and the **Global Value Tracing** instruction. 12eaa0b
+- [x] Task: Add the **Hypothesis Generation** step to the prompt template, requiring the model to analyze the bug description before the commit. 12eaa0b
+- [x] Task: Update unit tests in `internal/analyzer/engine_test.go` to ensure the new prompt sections (Skeptic, Hypothesis, Tracing) are present in the generated string. 12eaa0b
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Reasoning Engine & Prompt Refinement' (Protocol in workflow.md)
 
 ## Phase 3: Stability & Depth Verification
