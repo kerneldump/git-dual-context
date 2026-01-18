@@ -15,7 +15,7 @@
 
 ## Key Features & Standards
 - **Output Format:** Newline Delimited JSON (NDJSON)
-    - Rationale: Enables high-performance streaming of analysis results while remaining machine-readable and easy to pipe to tools like `jq`.
+    - Rationale: Enables high-performance streaming of both logs and results in a unified, machine-readable format that is easy to process with tools like `jq`.
 
 ## Architecture
 - **Structure:** Standard Go Project Layout
