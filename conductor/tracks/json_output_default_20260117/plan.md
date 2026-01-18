@@ -12,6 +12,6 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: CLI Output & Logging Redirection' (Protocol in workflow.md)
 
 ## Phase 3: Verification & Integration
-- [ ] Task: Verify that `stdout` remains valid NDJSON even when errors occur (errors should go to `stderr`).
+- [x] Task: Verify that `stdout` remains valid NDJSON even when errors occur (errors should go to `stderr`). 94896cb
 - [ ] Task: Test the output by piping to `jq` to ensure compatibility.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Verification & Integration' (Protocol in workflow.md)
