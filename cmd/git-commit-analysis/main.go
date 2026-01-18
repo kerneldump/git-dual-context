@@ -132,6 +132,7 @@ func main() {
 	}
 	sem := make(chan struct{}, *numWorkers) // Limit to N concurrent requests
 	var printMutex sync.Mutex
+	encoder := json.NewEncoder(os.Stdout)
 
 	for _, c := range commits {
 		wg.Add(1)
@@ -156,25 +157,17 @@ func main() {
 				return
 			}
 			if res.Skipped {
-				fmt.Printf("Commit: %s | [Skipped - No relevant code changes]\n", c.Hash.String()[:8])
-				fmt.Println("---------------------------------------------------")
+				// We don't output skipped commits in JSON mode as per spec (machine readable results only)
+				// but we can log them to stderr for progress visibility
+				fmt.Fprintf(os.Stderr, "Commit: %s | [Skipped - No relevant code changes]\n", c.Hash.String()[:8])
 				return
 			}
 
-			color := ""
-			label := string(res.Probability)
-			switch res.Probability {
-			case analyzer.ProbHigh:
-				color = "\033[31m" // Red
-			case analyzer.ProbMedium:
-				color = "\033[33m" // Yellow
-			case analyzer.ProbLow:
-				color = "\033[32m" // Green
+			// Encode and print as JSON
+			jr := res.ToJSONResult(c.Hash.String()[:8])
+			if err := encoder.Encode(jr); err != nil {
+				log.Printf("Failed to encode result for %s: %v", c.Hash.String(), err)
 			}
-
-			fmt.Printf("Commit: %s | Prob: %s%s\033[0m\n", c.Hash.String()[:8], color, label)
-			fmt.Printf("Reason: %s\n", res.Reasoning)
-			fmt.Println("---------------------------------------------------")
 		}(c)
 	}
 
