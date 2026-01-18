@@ -6,3 +6,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Refine LLM Reasoning Core**
   *Link: [./tracks/refine_llm_reasoning_core_20260117/](./tracks/refine_llm_reasoning_core_20260117/)*
+
+---
+
+- [~] **Track: JSON Output by Default**
+*Link: [./tracks/json_output_default_20260117/](./tracks/json_output_default_20260117/)*
