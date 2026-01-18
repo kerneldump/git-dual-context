@@ -2,7 +2,7 @@
 
 ## Phase 1: Engine & Logger Refinement
 - [x] Task: Update `JSONResult` to include the `"type": "result"` discriminator. b386887
-- [ ] Task: Define a `LogEntry` struct in `internal/analyzer` for structured logging.
+- [x] Task: Define a `LogEntry` struct in `internal/analyzer` for structured logging. 40e09e2
 - [ ] Task: Implement a structured logger helper to ensure consistent JSON formatting for logs.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Engine & Logger Refinement' (Protocol in workflow.md)
 
