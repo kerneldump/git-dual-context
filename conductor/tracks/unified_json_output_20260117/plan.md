@@ -7,9 +7,9 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Engine & Logger Refinement' (Protocol in workflow.md)
 
 ## Phase 2: CLI Unified Output
-- [ ] Task: Update `cmd/git-commit-analysis/main.go` to use the new structured logger for all progress and status messages.
-- [ ] Task: Redirect all remaining `stderr` output (cloning progress, etc.) to the structured logger on `stdout`.
-- [ ] Task: Ensure the `json.Encoder` is shared or consistently used for all JSON output types.
+- [x] Task: Update `cmd/git-commit-analysis/main.go` to use the new structured logger for all progress and status messages. 7c95913
+- [x] Task: Redirect all remaining `stderr` output (cloning progress, etc.) to the structured logger on `stdout`. 7c95913
+- [x] Task: Ensure the `json.Encoder` is shared or consistently used for all JSON output types. 7c95913
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: CLI Unified Output' (Protocol in workflow.md)
 
 ## Phase 3: Verification
