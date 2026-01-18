@@ -17,7 +17,9 @@ Git Dual-Context Analysis addresses the limitations of traditional debugging by 
 ## Key Features
 - **Dual-Context Analysis:** Simultaneously analyzes the "Standard Diff" (Micro) for developer intent and the "Full Comparison Diff" (Macro) for evolutionary context.
 - **3-Tier Classification System:** Classifies probability as **High** (Smoking Gun), **Medium** (Ambiguous/Suspicious), or **Low** (Unrelated) to reduce false positives.
-- **Chain-of-Thought Reasoning:** Forces the LLM to reason step-by-step (Micro -> Macro -> Classification) before delivering a verdict, improving diagnosis accuracy.
+- **Multi-Step Analytical Reasoning:** Forces the LLM to undergo a rigorous 4-step process: Hypothesis Generation, Micro-Analysis, Macro-Analysis, and Skeptical Classification, ensuring depth and accuracy.
+- **Skeptical Persona:** Instructs the reasoning engine to actively attempt to disprove causation, reducing false positives and focusing on demonstrable evidence.
+- **Deterministic Analysis:** Utilizes low-temperature model configurations to ensure consistent and reproducible diagnosis across multiple runs.
 - **LLM Reasoning Engine:** Integrates with Google Gemini Pro to act as the core logic engine for complex code reasoning and diagnosis.
 - **Smart Logic Filtering:** Automatically focuses on functional code changes while excluding irrelevant artifacts like lock files and documentation.
 - **Unified JSON Stream:** Consolidates all tool output—including progress logs and analysis results—into a single, machine-readable NDJSON stream on `stdout`, allowing for complete automation and easy filtering with tools like `jq`.

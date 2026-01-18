@@ -16,6 +16,8 @@
 ## Key Features & Standards
 - **Output Format:** Newline Delimited JSON (NDJSON)
     - Rationale: Enables high-performance streaming of both logs and results in a unified, machine-readable format that is easy to process with tools like `jq`.
+- **Reasoning Configuration:** Temperature 0.1
+    - Rationale: Ensures deterministic and reproducible LLM outputs for technical analysis.
 
 ## Architecture
 - **Structure:** Standard Go Project Layout
