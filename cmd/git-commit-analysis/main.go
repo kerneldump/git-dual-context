@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -21,7 +20,21 @@ import (
 )
 
 func main() {
-	log.SetOutput(os.Stderr)
+	// Redirect all logs to stdout via our encoder
+	encoder := json.NewEncoder(os.Stdout)
+	var printMutex sync.Mutex
+
+	logJSON := func(level, msg string) {
+		printMutex.Lock()
+		defer printMutex.Unlock()
+		encoder.Encode(analyzer.NewLogEntry(level, msg))
+	}
+
+	fatalJSON := func(msg string) {
+		logJSON("ERROR", msg)
+		os.Exit(1)
+	}
+
 	repoPath := flag.String("repo", ".", "Path to the git repository")
 	errorMsg := flag.String("error", "", "The error message or bug description to analyze")
 	numCommits := flag.Int("n", 5, "Number of commits to analyze")
@@ -30,7 +43,7 @@ func main() {
 	flag.Parse()
 
 	if *errorMsg == "" {
-		log.Fatal("Please provide an error message using -error")
+		fatalJSON("Please provide an error message using -error")
 	}
 
 	key := *apiKey
@@ -38,7 +51,7 @@ func main() {
 		key = os.Getenv("GEMINI_API_KEY")
 	}
 	if key == "" {
-		log.Fatal("Error: No API key provided. Please use -apikey flag or set GEMINI_API_KEY environment variable.")
+		fatalJSON("Error: No API key provided. Please use -apikey flag or set GEMINI_API_KEY environment variable.")
 	}
 
 	// Initialize Git
@@ -50,55 +63,48 @@ func main() {
 		// Create temp dir
 		tempDir, err := os.MkdirTemp("", "git-analysis-*")
 		if err != nil {
-			log.Fatalf("Failed to create temp dir: %v", err)
+			fatalJSON(err.Error())
 		}
 		defer os.RemoveAll(tempDir) // Clean up
 
-		fmt.Fprintf(os.Stderr, "Cloning %s into temporary directory...\n", *repoPath)
+		logJSON("INFO", "Cloning "+*repoPath+" into temporary directory...")
 		r, err = git.PlainClone(tempDir, false, &git.CloneOptions{
-			URL:      *repoPath,
-			Progress: os.Stderr,
+			URL: *repoPath,
+			// Progress: os.Stderr, // Removing progress as it's hard to make JSON
 		})
 		if err != nil {
-			log.SetOutput(os.Stderr)
-			log.Fatalf("Failed to clone repo: %v", err)
+			fatalJSON("Failed to clone repo: " + err.Error())
 		}
 	} else {
 		// Local repo
 		r, err = git.PlainOpen(*repoPath)
 		if err != nil {
-			log.SetOutput(os.Stderr)
-			log.Fatalf("Failed to open git repo at %s: %v", *repoPath, err)
+			fatalJSON("Failed to open git repo at " + *repoPath + ": " + err.Error())
 		}
 	}
 
 	headRef, err := r.Head()
 	if err != nil {
-		log.SetOutput(os.Stderr)
-		log.Fatalf("Failed to get HEAD: %v", err)
+		fatalJSON("Failed to get HEAD: " + err.Error())
 	}
 
 	// Initialize Gemini
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(key))
 	if err != nil {
-		log.SetOutput(os.Stderr)
-		log.Fatalf("Failed to create Gemini client: %v", err)
+		fatalJSON("Failed to create Gemini client: " + err.Error())
 	}
 	defer client.Close()
 
 	model := client.GenerativeModel("models/gemini-3-pro-preview")
-	// model.ResponseMIMEType = "application/json" // Removed as it causes hangs with this model
 
 	// Iterate Commits
 	cIter, err := r.Log(&git.LogOptions{From: headRef.Hash()})
 	if err != nil {
-		log.SetOutput(os.Stderr)
-		log.Fatalf("Failed to get commit log: %v", err)
+		fatalJSON("Failed to get commit log: " + err.Error())
 	}
 
-	fmt.Fprintf(os.Stderr, "Analyzing last %d commits for error: %q\n", *numCommits, *errorMsg)
-	fmt.Fprintln(os.Stderr, "---------------------------------------------------")
+	logJSON("INFO", fmt.Sprintf("Analyzing last %d commits for error: %q", *numCommits, *errorMsg))
 
 	// Collect commits first
 	var commits []*object.Commit
@@ -112,7 +118,7 @@ func main() {
 			break
 		}
 		if err != nil {
-			log.Fatalf("Error iterating commits: %v", err)
+			fatalJSON("Error iterating commits: " + err.Error())
 		}
 
 		// Skip merge commits
@@ -130,8 +136,6 @@ func main() {
 		*numWorkers = 1
 	}
 	sem := make(chan struct{}, *numWorkers) // Limit to N concurrent requests
-	var printMutex sync.Mutex
-	encoder := json.NewEncoder(os.Stdout)
 
 	for _, c := range commits {
 		wg.Add(1)
@@ -152,21 +156,17 @@ func main() {
 			defer printMutex.Unlock()
 
 			if err != nil {
-				log.Printf("Failed to analyze commit %s: %v", c.Hash.String(), err)
+				encoder.Encode(analyzer.NewLogEntry("ERROR", fmt.Sprintf("Failed to analyze commit %s: %v", c.Hash.String(), err)))
 				return
 			}
 			if res.Skipped {
-				// We don't output skipped commits in JSON mode as per spec (machine readable results only)
-				// but we can log them to stderr for progress visibility
-				fmt.Fprintf(os.Stderr, "Commit: %s | [Skipped - No relevant code changes]\n", c.Hash.String()[:8])
+				encoder.Encode(analyzer.NewLogEntry("INFO", fmt.Sprintf("Commit: %s | [Skipped - No relevant code changes]", c.Hash.String()[:8])))
 				return
 			}
 
 			// Encode and print as JSON
 			jr := res.ToJSONResult(c.Hash.String()[:8])
-			if err := encoder.Encode(jr); err != nil {
-				log.Printf("Failed to encode result for %s: %v", c.Hash.String(), err)
-			}
+			encoder.Encode(jr)
 		}(c)
 	}
 
