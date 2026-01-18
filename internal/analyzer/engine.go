@@ -48,6 +48,7 @@ type AnalysisResult struct {
 
 // JSONResult represents the final output format for the CLI
 type JSONResult struct {
+	Type        string      `json:"type"`
 	Hash        string      `json:"hash"`
 	Probability Probability `json:"probability"`
 	Reasoning   string      `json:"reasoning"`
@@ -56,6 +57,7 @@ type JSONResult struct {
 // ToJSONResult converts an internal AnalysisResult to the CLI-friendly JSONResult
 func (ar *AnalysisResult) ToJSONResult(hash string) JSONResult {
 	return JSONResult{
+		Type:        "result",
 		Hash:        hash,
 		Probability: ar.Probability,
 		Reasoning:   ar.Reasoning,

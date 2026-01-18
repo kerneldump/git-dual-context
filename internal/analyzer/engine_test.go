@@ -89,6 +89,7 @@ STEP 2: ...
 
 func TestJSONResultSerialization(t *testing.T) {
 	result := JSONResult{
+		Type:        "result",
 		Hash:        "12345678",
 		Probability: ProbHigh,
 		Reasoning:   "Testing serialization",
@@ -99,7 +100,7 @@ func TestJSONResultSerialization(t *testing.T) {
 		t.Fatalf("failed to marshal JSONResult: %v", err)
 	}
 
-	expected := `{"hash":"12345678","probability":"HIGH","reasoning":"Testing serialization"}`
+	expected := `{"type":"result","hash":"12345678","probability":"HIGH","reasoning":"Testing serialization"}`
 	if string(data) != expected {
 		t.Errorf("expected %s, got %s", expected, string(data))
 	}
