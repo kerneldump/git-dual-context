@@ -11,6 +11,6 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Reasoning Engine & Prompt Refinement' (Protocol in workflow.md)
 
 ## Phase 3: Stability & Depth Verification
-- [ ] Task: Execute the tool 3 times against the known problematic commits (`be8f779e` and `1c932131`) and verify that results are consistent.
-- [ ] Task: Audit the generated reasoning to ensure it explicitly traces the path of the `-2` value through the diffs as per the new instructions.
+- [x] Task: Execute the tool 3 times against the known problematic commits (`be8f779e` and `1c932131`) and verify that results are consistent. de57e97
+- [x] Task: Audit the generated reasoning to ensure it explicitly traces the path of the `-2` value through the diffs as per the new instructions. de57e97
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Stability & Depth Verification' (Protocol in workflow.md)
