@@ -97,6 +97,7 @@ func main() {
 	defer client.Close()
 
 	model := client.GenerativeModel("models/gemini-3-pro-preview")
+	model.SetTemperature(0.1)
 
 	// Iterate Commits
 	cIter, err := r.Log(&git.LogOptions{From: headRef.Hash()})
