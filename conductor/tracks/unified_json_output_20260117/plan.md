@@ -1,10 +1,10 @@
 # Implementation Plan - Unified JSON Output
 
-## Phase 1: Engine & Logger Refinement
+## Phase 1: Engine & Logger Refinement [checkpoint: c821896]
 - [x] Task: Update `JSONResult` to include the `"type": "result"` discriminator. b386887
 - [x] Task: Define a `LogEntry` struct in `internal/analyzer` for structured logging. 40e09e2
 - [x] Task: Implement a structured logger helper to ensure consistent JSON formatting for logs. fac9ffe
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Engine & Logger Refinement' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Engine & Logger Refinement' (Protocol in workflow.md)
 
 ## Phase 2: CLI Unified Output
 - [ ] Task: Update `cmd/git-commit-analysis/main.go` to use the new structured logger for all progress and status messages.
