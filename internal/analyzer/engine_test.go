@@ -104,3 +104,23 @@ func TestJSONResultSerialization(t *testing.T) {
 		t.Errorf("expected %s, got %s", expected, string(data))
 	}
 }
+
+func TestToJSONResult(t *testing.T) {
+	ar := &AnalysisResult{
+		Probability: ProbLow,
+		Reasoning:   "It is fine",
+	}
+	hash := "abc1234"
+
+	jr := ar.ToJSONResult(hash)
+
+	if jr.Hash != hash {
+		t.Errorf("expected hash %s, got %s", hash, jr.Hash)
+	}
+	if jr.Probability != ProbLow {
+		t.Errorf("expected probability %s, got %s", ProbLow, jr.Probability)
+	}
+	if jr.Reasoning != "It is fine" {
+		t.Errorf("expected reasoning 'It is fine', got %s", jr.Reasoning)
+	}
+}

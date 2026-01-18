@@ -56,6 +56,15 @@ type JSONResult struct {
 	Reasoning   string      `json:"reasoning"`
 }
 
+// ToJSONResult converts an internal AnalysisResult to the CLI-friendly JSONResult
+func (ar *AnalysisResult) ToJSONResult(hash string) JSONResult {
+	return JSONResult{
+		Hash:        hash,
+		Probability: ar.Probability,
+		Reasoning:   ar.Reasoning,
+	}
+}
+
 // AnalyzeCommit performs the dual-context analysis on a single commit
 func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, headHash plumbing.Hash, errorMsg string, model *genai.GenerativeModel) (*AnalysisResult, error) {
 	// 1. Standard Diff (C vs Parent)
