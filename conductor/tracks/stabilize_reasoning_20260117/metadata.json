@@ -1,0 +1,8 @@
+{
+  "track_id": "stabilize_reasoning_20260117",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-01-17T17:35:00Z",
+  "updated_at": "2026-01-17T17:35:00Z",
+  "description": "Stabilize & Refine LLM Reasoning by locking temperature and improving prompt instructions."
+}
