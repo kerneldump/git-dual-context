@@ -20,6 +20,7 @@ import (
 )
 
 func main() {
+	log.SetOutput(os.Stderr)
 	repoPath := flag.String("repo", ".", "Path to the git repository")
 	errorMsg := flag.String("error", "", "The error message or bug description to analyze")
 	numCommits := flag.Int("n", 5, "Number of commits to analyze")
@@ -36,6 +37,7 @@ func main() {
 		key = os.Getenv("GEMINI_API_KEY")
 	}
 	if key == "" {
+		log.SetOutput(os.Stderr)
 		log.Fatal("Error: No API key provided. Please use -apikey flag or set GEMINI_API_KEY environment variable.")
 	}
 
@@ -48,28 +50,32 @@ func main() {
 		// Create temp dir
 		tempDir, err := os.MkdirTemp("", "git-analysis-*")
 		if err != nil {
+			log.SetOutput(os.Stderr)
 			log.Fatalf("Failed to create temp dir: %v", err)
 		}
 		defer os.RemoveAll(tempDir) // Clean up
 
-		fmt.Printf("Cloning %s into temporary directory...\n", *repoPath)
+		fmt.Fprintf(os.Stderr, "Cloning %s into temporary directory...\n", *repoPath)
 		r, err = git.PlainClone(tempDir, false, &git.CloneOptions{
 			URL:      *repoPath,
-			Progress: os.Stdout,
+			Progress: os.Stderr,
 		})
 		if err != nil {
+			log.SetOutput(os.Stderr)
 			log.Fatalf("Failed to clone repo: %v", err)
 		}
 	} else {
 		// Local repo
 		r, err = git.PlainOpen(*repoPath)
 		if err != nil {
+			log.SetOutput(os.Stderr)
 			log.Fatalf("Failed to open git repo at %s: %v", *repoPath, err)
 		}
 	}
 
 	headRef, err := r.Head()
 	if err != nil {
+		log.SetOutput(os.Stderr)
 		log.Fatalf("Failed to get HEAD: %v", err)
 	}
 
@@ -77,6 +83,7 @@ func main() {
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(key))
 	if err != nil {
+		log.SetOutput(os.Stderr)
 		log.Fatalf("Failed to create Gemini client: %v", err)
 	}
 	defer client.Close()
@@ -87,11 +94,12 @@ func main() {
 	// Iterate Commits
 	cIter, err := r.Log(&git.LogOptions{From: headRef.Hash()})
 	if err != nil {
+		log.SetOutput(os.Stderr)
 		log.Fatalf("Failed to get commit log: %v", err)
 	}
 
-	fmt.Printf("Analyzing last %d commits for error: %q\n", *numCommits, *errorMsg)
-	fmt.Println("---------------------------------------------------")
+	fmt.Fprintf(os.Stderr, "Analyzing last %d commits for error: %q\n", *numCommits, *errorMsg)
+	fmt.Fprintln(os.Stderr, "---------------------------------------------------")
 
 	// Collect commits first
 	var commits []*object.Commit
