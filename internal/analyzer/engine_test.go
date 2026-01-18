@@ -126,6 +126,25 @@ func TestToJSONResult(t *testing.T) {
 	}
 }
 
+func TestLogEntrySerialization(t *testing.T) {
+	entry := LogEntry{
+		Type:      "log",
+		Level:     "INFO",
+		Msg:       "Started analysis",
+		Timestamp: "2026-01-17T17:00:00Z",
+	}
+
+	data, err := json.Marshal(entry)
+	if err != nil {
+		t.Fatalf("failed to marshal LogEntry: %v", err)
+	}
+
+	expected := `{"type":"log","level":"INFO","msg":"Started analysis","timestamp":"2026-01-17T17:00:00Z"}`
+	if string(data) != expected {
+		t.Errorf("expected %s, got %s", expected, string(data))
+	}
+}
+
 func TestMaliciousJSONParsing(t *testing.T) {
 	input := `
 Reasoning: The code contains a function { return true; } which is fine.

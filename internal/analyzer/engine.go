@@ -54,6 +54,14 @@ type JSONResult struct {
 	Reasoning   string      `json:"reasoning"`
 }
 
+// LogEntry represents a structured log message
+type LogEntry struct {
+	Type      string `json:"type"`
+	Level     string `json:"level"`
+	Msg       string `json:"msg"`
+	Timestamp string `json:"timestamp"`
+}
+
 // ToJSONResult converts an internal AnalysisResult to the CLI-friendly JSONResult
 func (ar *AnalysisResult) ToJSONResult(hash string) JSONResult {
 	return JSONResult{
