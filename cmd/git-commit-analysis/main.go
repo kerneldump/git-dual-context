@@ -38,7 +38,6 @@ func main() {
 		key = os.Getenv("GEMINI_API_KEY")
 	}
 	if key == "" {
-		log.SetOutput(os.Stderr)
 		log.Fatal("Error: No API key provided. Please use -apikey flag or set GEMINI_API_KEY environment variable.")
 	}
 
@@ -51,7 +50,6 @@ func main() {
 		// Create temp dir
 		tempDir, err := os.MkdirTemp("", "git-analysis-*")
 		if err != nil {
-			log.SetOutput(os.Stderr)
 			log.Fatalf("Failed to create temp dir: %v", err)
 		}
 		defer os.RemoveAll(tempDir) // Clean up

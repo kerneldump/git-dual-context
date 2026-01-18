@@ -1,0 +1,8 @@
+{
+  "track_id": "unified_json_output_20260117",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-01-17T17:05:00Z",
+  "updated_at": "2026-01-17T17:05:00Z",
+  "description": "Unified JSON output for results and logs on stdout."
+}
