@@ -6,7 +6,7 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Engine & Data Structure Refinement' (Protocol in workflow.md)
 
 ## Phase 2: CLI Output & Logging Redirection
-- [ ] Task: Update `cmd/git-commit-analysis/main.go` to redirect all `fmt.Printf` and `log` calls (except results) to `os.Stderr`.
+- [x] Task: Update `cmd/git-commit-analysis/main.go` to redirect all `fmt.Printf` and `log` calls (except results) to `os.Stderr`. 6ef1811
 - [ ] Task: Replace the color-coded text printing logic in the results goroutine with `json.Encoder` writing to `os.Stdout`.
 - [ ] Task: Ensure each JSON object is followed by a newline (NDJSON format).
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: CLI Output & Logging Redirection' (Protocol in workflow.md)
