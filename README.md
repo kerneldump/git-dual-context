@@ -61,35 +61,40 @@ go build -o git-commit-analysis ./cmd/git-commit-analysis
       -n 5
     ```
 
-### Flags
+### Output Format (NDJSON)
 
-| Flag | Description | Default |
-| :--- | :--- | :--- |
-| `-repo` | Path to local git repo OR URL to remote repo | `.` (Current Dir) |
-| `-error` | **(Required)** Description of the bug/error to analyze | `""` |
-| `-n` | Number of recent commits to analyze | `5` |
-| `-j` | Number of concurrent workers | `3` |
-| `-apikey` | Gemini API Key (Alternative to ENV var) | `""` |
+The tool outputs results in **Newline Delimited JSON (NDJSON)** format by default on `stdout`. This includes both progress logs and analysis results, which can be distinguished by the `type` field.
+
+-   `"type": "result"`: Contains analysis findings (`hash`, `probability`, `reasoning`).
+-   `"type": "log"`: Contains progress and status updates (`level`, `msg`, `timestamp`).
+
+#### Pro-tip: Isolate Results with `jq`
+
+To see only high-probability commits:
+
+```bash
+./git-commit-analysis -error="..." | jq 'select(.type=="result" and .probability=="HIGH")'
+```
+
+To silence logs and get a clean JSON stream:
+
+```bash
+./git-commit-analysis -error="..." | jq 'select(.type=="result")'
+```
+
+---
 
 ## Example Output
 
-Diagnosing a runtime error in `signal-sentry`:
-
-```text
-Analyzing last 5 commits for error: "interval must be greater than 0, got -2"
----------------------------------------------------
-Commit: be8f779e | Prob: High
-Reason: The commit modifies `internal/analysis/filter.go` to explicitly process negative values. 
-The bug description suggests this code path is now triggering validation errors that were previously masked.
----------------------------------------------------
-Commit: 1c932131 | Prob: High
-Reason: The commit changes X-axis bounds calculation. Interactions with subsequent commits 
-cause the calculated interval to be negative (-2), matching the error message exactly.
----------------------------------------------------
-Commit: 26cb336c | Prob: Low
-Reason: Only updates Markdown documentation.
----------------------------------------------------
+```json
+{"type":"log","level":"INFO","msg":"Cloning https://github.com/... into temporary directory...","timestamp":"2026-01-17T17:15:00Z"}
+{"type":"log","level":"INFO","msg":"Analyzing last 5 commits for error: \"interval must be greater than 0, got -2\"","timestamp":"2026-01-17T17:15:05Z"}
+{"type":"result","hash":"be8f779e","probability":"HIGH","reasoning":"The commit modifies NewTimeFilter to accept negative durations instead of ignoring them, which eventually reaches a ticker validation check."}
+{"type":"result","hash":"1c932131","probability":"MEDIUM","reasoning":"The commit modifies axis bounds calculation, which could potentially result in negative intervals in edge cases."}
+{"type":"result","hash":"26cb336c","probability":"LOW","reasoning":"Documentation only change."}
 ```
+
+### Flags
 
 ## Limitations & Notes
 
