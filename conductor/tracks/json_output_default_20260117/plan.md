@@ -11,7 +11,7 @@
 - [x] Task: Ensure each JSON object is followed by a newline (NDJSON format). 3b34aeb
 - [x] Task: Conductor - User Manual Verification 'Phase 2: CLI Output & Logging Redirection' (Protocol in workflow.md)
 
-## Phase 3: Verification & Integration
+## Phase 3: Verification & Polish [checkpoint: cec9034]
 - [x] Task: Verify that `stdout` remains valid NDJSON even when errors occur (errors should go to `stderr`). 94896cb
 - [x] Task: Test the output by piping to `jq` to ensure compatibility. 0715b68
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Verification & Integration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Verification & Polish' (Protocol in workflow.md)
