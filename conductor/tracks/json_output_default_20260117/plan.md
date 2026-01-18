@@ -7,8 +7,8 @@
 
 ## Phase 2: CLI Output & Logging Redirection
 - [x] Task: Update `cmd/git-commit-analysis/main.go` to redirect all `fmt.Printf` and `log` calls (except results) to `os.Stderr`. 6ef1811
-- [ ] Task: Replace the color-coded text printing logic in the results goroutine with `json.Encoder` writing to `os.Stdout`.
-- [ ] Task: Ensure each JSON object is followed by a newline (NDJSON format).
+- [x] Task: Replace the color-coded text printing logic in the results goroutine with `json.Encoder` writing to `os.Stdout`. 3b34aeb
+- [x] Task: Ensure each JSON object is followed by a newline (NDJSON format). 3b34aeb
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: CLI Output & Logging Redirection' (Protocol in workflow.md)
 
 ## Phase 3: Verification & Integration
