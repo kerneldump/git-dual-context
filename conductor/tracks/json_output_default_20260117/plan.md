@@ -2,7 +2,7 @@
 
 ## Phase 1: Engine & Data Structure Refinement
 - [x] Task: Define a dedicated `JSONResult` struct in `internal/analyzer` to ensure consistent serialization. 554b8f8
-- [ ] Task: Update `AnalyzeResult` or create a conversion helper to match the required output schema (`hash`, `probability`, `reasoning`).
+- [x] Task: Update `AnalyzeResult` or create a conversion helper to match the required output schema (`hash`, `probability`, `reasoning`). bbc26ba
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Engine & Data Structure Refinement' (Protocol in workflow.md)
 
 ## Phase 2: CLI Output & Logging Redirection
