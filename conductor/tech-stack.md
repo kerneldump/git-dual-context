@@ -13,6 +13,10 @@
 - **API Connectivity:** `google.golang.org/api`
     - Purpose: Support library for Google Cloud and API authentication.
 
+## Key Features & Standards
+- **Output Format:** Newline Delimited JSON (NDJSON)
+    - Rationale: Enables high-performance streaming of analysis results while remaining machine-readable and easy to pipe to tools like `jq`.
+
 ## Architecture
 - **Structure:** Standard Go Project Layout
     - `cmd/`: Contains the main entry points for tool executables.

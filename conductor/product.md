@@ -20,8 +20,9 @@ Git Dual-Context Analysis addresses the limitations of traditional debugging by 
 - **Chain-of-Thought Reasoning:** Forces the LLM to reason step-by-step (Micro -> Macro -> Classification) before delivering a verdict, improving diagnosis accuracy.
 - **LLM Reasoning Engine:** Integrates with Google Gemini Pro to act as the core logic engine for complex code reasoning and diagnosis.
 - **Smart Logic Filtering:** Automatically focuses on functional code changes while excluding irrelevant artifacts like lock files and documentation.
+- **Machine-Readable Output:** Streams results in Newline Delimited JSON (NDJSON) format by default, enabling seamless integration with downstream tools and CI/CD pipelines.
 
 ## Success Criteria & Goals
 - **Refined Accuracy:** Continuous improvement of analysis accuracy through optimized LLM prompting and model refinement.
 - **Provider Flexibility:** Expansion of support for additional LLM providers and alternative version control systems.
-- **Enhanced CLI Experience:** Delivery of robust reporting, clear diff visualization, and seamless integration hooks for developer workflows.
+- **Enhanced CLI Experience:** Delivery of robust reporting, NDJSON support for automated processing, and seamless integration hooks for developer workflows.
