@@ -145,6 +145,25 @@ func TestLogEntrySerialization(t *testing.T) {
 	}
 }
 
+func TestStructuredLogger(t *testing.T) {
+	msg := "Test message"
+	level := "INFO"
+	entry := NewLogEntry(level, msg)
+
+	if entry.Type != "log" {
+		t.Errorf("expected type 'log', got %s", entry.Type)
+	}
+	if entry.Level != level {
+		t.Errorf("expected level %s, got %s", level, entry.Level)
+	}
+	if entry.Msg != msg {
+		t.Errorf("expected msg %s, got %s", msg, entry.Msg)
+	}
+	if entry.Timestamp == "" {
+		t.Error("expected non-empty timestamp")
+	}
+}
+
 func TestMaliciousJSONParsing(t *testing.T) {
 	input := `
 Reasoning: The code contains a function { return true; } which is fine.

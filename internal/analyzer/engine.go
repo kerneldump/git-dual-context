@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"git-commit-analysis/internal/gitdiff"
 
@@ -60,6 +61,16 @@ type LogEntry struct {
 	Level     string `json:"level"`
 	Msg       string `json:"msg"`
 	Timestamp string `json:"timestamp"`
+}
+
+// NewLogEntry creates a new LogEntry with the current timestamp
+func NewLogEntry(level, msg string) LogEntry {
+	return LogEntry{
+		Type:      "log",
+		Level:     level,
+		Msg:       msg,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	}
 }
 
 // ToJSONResult converts an internal AnalysisResult to the CLI-friendly JSONResult
