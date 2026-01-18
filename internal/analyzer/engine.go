@@ -49,6 +49,13 @@ type AnalysisResult struct {
 	Skipped     bool        `json:"-"`
 }
 
+// JSONResult represents the final output format for the CLI
+type JSONResult struct {
+	Hash        string      `json:"hash"`
+	Probability Probability `json:"probability"`
+	Reasoning   string      `json:"reasoning"`
+}
+
 // AnalyzeCommit performs the dual-context analysis on a single commit
 func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, headHash plumbing.Hash, errorMsg string, model *genai.GenerativeModel) (*AnalysisResult, error) {
 	// 1. Standard Diff (C vs Parent)

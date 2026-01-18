@@ -86,3 +86,21 @@ STEP 2: ...
 		t.Errorf("expected 'noisy response test', got %v", res.Reasoning)
 	}
 }
+
+func TestJSONResultSerialization(t *testing.T) {
+	result := JSONResult{
+		Hash:        "12345678",
+		Probability: ProbHigh,
+		Reasoning:   "Testing serialization",
+	}
+
+	data, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("failed to marshal JSONResult: %v", err)
+	}
+
+	expected := `{"hash":"12345678","probability":"HIGH","reasoning":"Testing serialization"}`
+	if string(data) != expected {
+		t.Errorf("expected %s, got %s", expected, string(data))
+	}
+}
