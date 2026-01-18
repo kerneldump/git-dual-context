@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"git-commit-analysis/internal/gitdiff"
@@ -14,8 +13,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/generative-ai-go/genai"
 )
-
-var jsonRegex = regexp.MustCompile(`(?s)\{.*\}`)
 
 // Probability represents the likelihood of a commit causing a bug
 type Probability string
@@ -111,7 +108,7 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, hea
 	var result AnalysisResult
 	for _, part := range resp.Candidates[0].Content.Parts {
 		if txt, ok := part.(genai.Text); ok {
-			cleanTxt := jsonRegex.FindString(string(txt))
+			cleanTxt := findJSONBlock(string(txt))
 			if cleanTxt == "" {
 				// Fallback if no JSON found
 				return nil, fmt.Errorf("no JSON found in response for %s", c.Hash.String()[:8])
@@ -175,5 +172,33 @@ Finally, return the result in this JSON format (do not use markdown blocks):
   "reasoning": "A concise summary of your analysis."
 }
 `, errorMsg, c.Hash.String(), c.Message, stdDiff, fullDiff)
+}
+
+// findJSONBlock attempts to find the largest valid JSON object in the text.
+// It scans from the last '}' backwards to find a matching '{'.
+func findJSONBlock(text string) string {
+	end := strings.LastIndex(text, "}")
+	if end == -1 {
+		return ""
+	}
+
+	// Simple heuristic: find the last '}' and the first '{' before it
+	// But simply finding the first '{' might match too early (e.g. nested braces in reasoning text).
+	// So we can try to parse from every '{' found before 'end' until we succeed.
+	
+	// Optimization: Start searching for '{' from the end backwards.
+	for start := strings.LastIndex(text[:end], "{"); start != -1; start = strings.LastIndex(text[:start], "{") {
+		candidate := text[start : end+1]
+		// Fast check: does it look like our schema?
+		if !strings.Contains(candidate, "\"probability\"") {
+			continue
+		}
+		var js map[string]interface{}
+		if json.Unmarshal([]byte(candidate), &js) == nil {
+			return candidate
+		}
+	}
+	
+	return ""
 }
 

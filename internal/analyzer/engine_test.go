@@ -74,7 +74,7 @@ STEP 2: ...
   "reasoning": "noisy response test"
 }
 `
-	cleanTxt := jsonRegex.FindString(input)
+	cleanTxt := findJSONBlock(input)
 	var res AnalysisResult
 	if err := json.Unmarshal([]byte(cleanTxt), &res); err != nil {
 		t.Fatalf("failed to unmarshal: %v", err)
@@ -122,5 +122,28 @@ func TestToJSONResult(t *testing.T) {
 	}
 	if jr.Reasoning != "It is fine" {
 		t.Errorf("expected reasoning 'It is fine', got %s", jr.Reasoning)
+	}
+}
+
+func TestMaliciousJSONParsing(t *testing.T) {
+	input := `
+Reasoning: The code contains a function { return true; } which is fine.
+Also checking for edge cases like {}.
+
+{
+  "probability": "LOW",
+  "reasoning": "The commit is safe."
+}
+`
+	// We want the extraction logic to be smart enough to find the *actual* JSON object
+	// For now, let's verify if the current regex finds it.
+	cleanTxt := findJSONBlock(input)
+	
+	var res AnalysisResult
+	if err := json.Unmarshal([]byte(cleanTxt), &res); err != nil {
+		t.Fatalf("failed to unmarshal malicious input: %v. Extracted text: %s", err, cleanTxt)
+	}
+	if res.Probability != ProbLow {
+		t.Errorf("expected LOW, got %v", res.Probability)
 	}
 }
