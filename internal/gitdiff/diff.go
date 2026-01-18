@@ -7,6 +7,39 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
+const (
+	// MaxDiffSize is the maximum size of a diff in characters
+	MaxDiffSize = 50000
+	// TruncationMarker is appended when diffs are truncated
+	TruncationMarker = "\n... [truncated: diff too large] ...\n"
+)
+
+// TruncateDiff limits diff size to prevent context window overflow
+func TruncateDiff(diff string, maxSize int) string {
+	if len(diff) <= maxSize {
+		return diff
+	}
+
+	// Ensure we have enough room for the marker
+	markerLen := len(TruncationMarker)
+	if maxSize <= markerLen {
+		// If maxSize is too small, just return what we can
+		if maxSize <= 0 {
+			return ""
+		}
+		return diff[:maxSize]
+	}
+
+	// Try to truncate at a line boundary
+	truncateAt := maxSize - markerLen
+	lastNewline := strings.LastIndex(diff[:truncateAt], "\n")
+	if lastNewline > truncateAt/2 {
+		truncateAt = lastNewline
+	}
+
+	return diff[:truncateAt] + TruncationMarker
+}
+
 // GetStandardDiff returns the diff string and a list of modified file paths
 func GetStandardDiff(c, parent *object.Commit) (string, []string, error) {
 	cTree, err := c.Tree()
@@ -29,6 +62,7 @@ func GetStandardDiff(c, parent *object.Commit) (string, []string, error) {
 	}
 
 	var sb strings.Builder
+	sb.Grow(8192) // Pre-allocate 8KB for typical diffs
 	var files []string
 
 	for _, fp := range patch.FilePatches() {
@@ -59,6 +93,8 @@ func GetStandardDiff(c, parent *object.Commit) (string, []string, error) {
 				}
 				op := " "
 				switch chunk.Type() {
+				case 0: // Equal (context)
+					op = " "
 				case 1: // Add
 					op = "+"
 				case 2: // Delete
@@ -75,7 +111,8 @@ func GetStandardDiff(c, parent *object.Commit) (string, []string, error) {
 		}
 	}
 
-	return sb.String(), files, nil
+	result := sb.String()
+	return TruncateDiff(result, MaxDiffSize), files, nil
 }
 
 // GetFullDiff returns the diff between the commit and HEAD, restricted to the provided files
@@ -95,12 +132,15 @@ func GetFullDiff(c, head *object.Commit, filterFiles []string) (string, error) {
 		return "", err
 	}
 
-	fileSet := make(map[string]bool)
+	// Pre-size the map
+	fileSet := make(map[string]bool, len(filterFiles))
 	for _, f := range filterFiles {
 		fileSet[f] = true
 	}
 
 	var sb strings.Builder
+	sb.Grow(8192) // Pre-allocate 8KB for typical diffs
+
 	for _, fp := range patch.FilePatches() {
 		from, to := fp.Files()
 		path := ""
@@ -120,6 +160,8 @@ func GetFullDiff(c, head *object.Commit, filterFiles []string) (string, error) {
 				}
 				op := " "
 				switch chunk.Type() {
+				case 0: // Equal (context)
+					op = " "
 				case 1: // Add
 					op = "+"
 				case 2: // Delete
@@ -140,28 +182,64 @@ func GetFullDiff(c, head *object.Commit, filterFiles []string) (string, error) {
 		return "No further changes to these files since this commit.", nil
 	}
 
-	return sb.String(), nil
+	result := sb.String()
+	return TruncateDiff(result, MaxDiffSize), nil
 }
 
 // ShouldIgnoreFile returns true if the file should be skipped during analysis
 func ShouldIgnoreFile(path string) bool {
+	// Normalize path separators
+	path = strings.ReplaceAll(path, "\\", "/")
+
 	// 1. Lock files and checksums
-	if strings.HasSuffix(path, "go.sum") ||
-		strings.HasSuffix(path, "package-lock.json") ||
-		strings.HasSuffix(path, "yarn.lock") ||
-		strings.HasSuffix(path, "Gemfile.lock") {
-		return true
+	lockFiles := []string{
+		"go.sum", "package-lock.json", "yarn.lock", "Gemfile.lock",
+		"poetry.lock", "pnpm-lock.yaml", "Cargo.lock", "composer.lock",
+		"Pipfile.lock", "shrinkwrap.yaml",
+	}
+	for _, lf := range lockFiles {
+		if strings.HasSuffix(path, lf) {
+			return true
+		}
 	}
 
-	// 2. Test files (unless specifically debugging tests, usually noise for logic bugs)
-	if strings.HasSuffix(path, "_test.go") ||
-		strings.HasSuffix(path, ".test.js") ||
-		strings.HasSuffix(path, ".spec.ts") {
-		return true
+	// 2. Test files
+	testPatterns := []string{
+		"_test.go", ".test.js", ".test.ts", ".spec.js", ".spec.ts",
+		"_test.py", "_spec.rb",
+	}
+	for _, tp := range testPatterns {
+		if strings.HasSuffix(path, tp) {
+			return true
+		}
+	}
+	// Python test files with test_ prefix
+	parts := strings.Split(path, "/")
+	if len(parts) > 0 {
+		filename := parts[len(parts)-1]
+		if strings.HasPrefix(filename, "test_") && strings.HasSuffix(filename, ".py") {
+			return true
+		}
 	}
 
-	// 3. Vendor directory
-	if strings.HasPrefix(path, "vendor/") {
+	// 3. Directories to ignore
+	ignoreDirs := []string{
+		"vendor/", "node_modules/", "dist/", "build/", "out/",
+		".idea/", ".vscode/", ".git/",
+		"__pycache__/", ".pytest_cache/", ".tox/",
+	}
+	for _, dir := range ignoreDirs {
+		if strings.Contains(path, dir) {
+			return true
+		}
+	}
+
+	// 4. CI/CD files (usually don't cause runtime bugs)
+	if strings.HasPrefix(path, ".github/") ||
+		strings.HasPrefix(path, ".gitlab/") ||
+		strings.HasPrefix(path, ".circleci/") ||
+		path == ".gitlab-ci.yml" ||
+		path == ".travis.yml" {
 		return true
 	}
 

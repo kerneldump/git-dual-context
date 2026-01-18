@@ -10,7 +10,6 @@ import (
 	"git-commit-analysis/internal/gitdiff"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/generative-ai-go/genai"
 )
@@ -51,8 +50,20 @@ type AnalysisResult struct {
 type JSONResult struct {
 	Type        string      `json:"type"`
 	Hash        string      `json:"hash"`
+	Message     string      `json:"message,omitempty"`
 	Probability Probability `json:"probability"`
 	Reasoning   string      `json:"reasoning"`
+}
+
+// Summary represents the final analysis summary
+type Summary struct {
+	Type    string `json:"type"`
+	Total   int    `json:"total"`
+	High    int    `json:"high"`
+	Medium  int    `json:"medium"`
+	Low     int    `json:"low"`
+	Skipped int    `json:"skipped"`
+	Errors  int    `json:"errors"`
 }
 
 // LogEntry represents a structured log message
@@ -74,22 +85,33 @@ func NewLogEntry(level, msg string) LogEntry {
 }
 
 // ToJSONResult converts an internal AnalysisResult to the CLI-friendly JSONResult
-func (ar *AnalysisResult) ToJSONResult(hash string) JSONResult {
+func (ar *AnalysisResult) ToJSONResult(hash string, message string) JSONResult {
+	// Truncate message to first line
+	firstLine := strings.Split(message, "\n")[0]
+	if len(firstLine) > 80 {
+		firstLine = firstLine[:77] + "..."
+	}
+
 	return JSONResult{
 		Type:        "result",
 		Hash:        hash,
+		Message:     firstLine,
 		Probability: ar.Probability,
 		Reasoning:   ar.Reasoning,
 	}
 }
 
 // AnalyzeCommit performs the dual-context analysis on a single commit
-func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, headHash plumbing.Hash, errorMsg string, model *genai.GenerativeModel) (*AnalysisResult, error) {
+func AnalyzeCommit(ctx context.Context, r *git.Repository, c, headCommit *object.Commit, errorMsg string, model *genai.GenerativeModel) (*AnalysisResult, error) {
 	// 1. Standard Diff (C vs Parent)
 	// For the very first commit, parent is empty. Handle gracefully.
 	var parent *object.Commit
 	if len(c.ParentHashes) > 0 {
-		parent, _ = c.Parent(0)
+		var err error
+		parent, err = c.Parent(0)
+		if err != nil {
+			return nil, fmt.Errorf("getting parent commit for %s: %w", c.Hash.String()[:8], err)
+		}
 	}
 
 	stdDiff, modifiedFiles, err := gitdiff.GetStandardDiff(c, parent)
@@ -102,11 +124,6 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, hea
 	}
 
 	// 2. Full Comparison Diff (C vs HEAD), filtered by modifiedFiles
-	headCommit, err := r.CommitObject(headHash)
-	if err != nil {
-		return nil, fmt.Errorf("getting HEAD commit: %w", err)
-	}
-
 	fullDiff, err := gitdiff.GetFullDiff(c, headCommit, modifiedFiles)
 	if err != nil {
 		return nil, fmt.Errorf("getting full diff: %w", err)
@@ -122,22 +139,29 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, hea
 	}
 
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return nil, fmt.Errorf("empty response from gemini")
+		return nil, fmt.Errorf("empty response from gemini for commit %s", c.Hash.String()[:8])
 	}
 
 	// Parse Response
 	var result AnalysisResult
+	found := false
+
 	for _, part := range resp.Candidates[0].Content.Parts {
 		if txt, ok := part.(genai.Text); ok {
+			found = true
 			cleanTxt := findJSONBlock(string(txt))
 			if cleanTxt == "" {
-				// Fallback if no JSON found
 				return nil, fmt.Errorf("no JSON found in response for %s", c.Hash.String()[:8])
 			}
 			if err := json.Unmarshal([]byte(cleanTxt), &result); err != nil {
 				return nil, fmt.Errorf("parsing JSON for %s: %v. Raw: %s", c.Hash.String()[:8], err, string(txt))
 			}
+			break // Found and parsed, exit loop
 		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("no text content in gemini response for %s", c.Hash.String()[:8])
 	}
 
 	return &result, nil

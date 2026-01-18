@@ -95,6 +95,7 @@ func TestJSONResultSerialization(t *testing.T) {
 	result := JSONResult{
 		Type:        "result",
 		Hash:        "12345678",
+		Message:     "Fix bug",
 		Probability: ProbHigh,
 		Reasoning:   "Testing serialization",
 	}
@@ -104,7 +105,7 @@ func TestJSONResultSerialization(t *testing.T) {
 		t.Fatalf("failed to marshal JSONResult: %v", err)
 	}
 
-	expected := `{"type":"result","hash":"12345678","probability":"HIGH","reasoning":"Testing serialization"}`
+	expected := `{"type":"result","hash":"12345678","message":"Fix bug","probability":"HIGH","reasoning":"Testing serialization"}`
 	if string(data) != expected {
 		t.Errorf("expected %s, got %s", expected, string(data))
 	}
@@ -116,8 +117,9 @@ func TestToJSONResult(t *testing.T) {
 		Reasoning:   "It is fine",
 	}
 	hash := "abc1234"
+	message := "Fix important bug in authentication\nThis is a detailed description"
 
-	jr := ar.ToJSONResult(hash)
+	jr := ar.ToJSONResult(hash, message)
 
 	if jr.Hash != hash {
 		t.Errorf("expected hash %s, got %s", hash, jr.Hash)
@@ -127,6 +129,29 @@ func TestToJSONResult(t *testing.T) {
 	}
 	if jr.Reasoning != "It is fine" {
 		t.Errorf("expected reasoning 'It is fine', got %s", jr.Reasoning)
+	}
+	// Message should be truncated to first line
+	if jr.Message != "Fix important bug in authentication" {
+		t.Errorf("expected message 'Fix important bug in authentication', got %s", jr.Message)
+	}
+}
+
+func TestToJSONResultTruncatesLongMessage(t *testing.T) {
+	ar := &AnalysisResult{
+		Probability: ProbMedium,
+		Reasoning:   "Test",
+	}
+	hash := "abc1234"
+	// Message longer than 80 chars
+	longMessage := "This is an extremely long commit message that exceeds the 80 character limit and should be truncated"
+
+	jr := ar.ToJSONResult(hash, longMessage)
+
+	if len(jr.Message) > 80 {
+		t.Errorf("expected message to be truncated to 80 chars, got %d chars", len(jr.Message))
+	}
+	if !strings.HasSuffix(jr.Message, "...") {
+		t.Errorf("expected truncated message to end with '...', got %s", jr.Message)
 	}
 }
 
@@ -181,7 +206,7 @@ Also checking for edge cases like {}.
 	// We want the extraction logic to be smart enough to find the *actual* JSON object
 	// For now, let's verify if the current regex finds it.
 	cleanTxt := findJSONBlock(input)
-	
+
 	var res AnalysisResult
 	if err := json.Unmarshal([]byte(cleanTxt), &res); err != nil {
 		t.Fatalf("failed to unmarshal malicious input: %v. Extracted text: %s", err, cleanTxt)

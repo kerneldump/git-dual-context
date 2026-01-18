@@ -21,10 +21,13 @@ This tool is the reference implementation for the paper:
 
 -   **Automated Hypothesis Testing:** Automatically scans the last `N` commits to calculate the probability ($P(H_k|E)$) that a specific commit caused a given bug.
 -   **Dual-Context Analysis:**
-    -   Generates **Standard Diffs** to understand developer intent.
+    -   Generates **Standard Diffs** (with context lines) to understand developer intent.
     -   Generates **Full Comparison Diffs** to understand evolutionary context.
--   **LLM Integration:** Uses Google's Gemini Pro to act as the reasoning engine for probabilistic inference.
--   **Smart Filtering:** Automatically excludes lock files, documentation, and tests to focus on logic changes and conserve tokens.
+-   **LLM Integration:** Uses Google's Gemini models with configurable model selection.
+-   **Smart Filtering:** Automatically excludes lock files, vendor directories, test files, CI/CD configs, and build artifacts to focus on logic changes and conserve tokens.
+-   **Ordered Streaming Output:** Results stream in commit order as they become available—no waiting for all analyses to complete.
+-   **Retry Logic:** Automatic exponential backoff for rate limits and transient failures.
+-   **Graceful Shutdown:** Clean handling of Ctrl+C with proper cleanup.
 
 ## Usage
 
@@ -61,25 +64,67 @@ go build -o git-commit-analysis ./cmd/git-commit-analysis
       -n 5
     ```
 
-### Output Format (NDJSON)
+### Command-Line Options
 
-The tool outputs results in **Newline Delimited JSON (NDJSON)** format by default on `stdout`. This includes both progress logs and analysis results, which can be distinguished by the `type` field.
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-repo` | `.` | Path to git repository or remote URL |
+| `-branch` | current HEAD | Branch to analyze |
+| `-error` | (required) | The error message or bug description to analyze |
+| `-n` | `5` | Number of commits to analyze |
+| `-j` | `3` | Number of concurrent workers |
+| `-model` | `models/gemini-3-pro-preview` | Gemini model to use |
+| `-timeout` | `5m` | Timeout per commit analysis |
+| `-o` | stdout | Output file path |
+| `-apikey` | env `GEMINI_API_KEY` | Google Gemini API Key |
+| `-v` | `false` | Verbose output (debug info) |
 
--   `"type": "result"`: Contains analysis findings (`hash`, `probability`, `reasoning`).
--   `"type": "log"`: Contains progress and status updates (`level`, `msg`, `timestamp`).
-
-#### Pro-tip: Isolate Results with `jq`
-
-To see only high-probability commits:
+### Examples
 
 ```bash
-./git-commit-analysis -error="..." | jq 'select(.type=="result" and .probability=="HIGH")'
+# Analyze local repository
+./git-commit-analysis -error="panic: index out of bounds" -n 10
+
+# Analyze remote repository with custom model
+./git-commit-analysis \
+  -repo="https://github.com/user/repo.git" \
+  -error="connection timeout" \
+  -model="models/gemini-1.5-flash"
+
+# Save output to file
+./git-commit-analysis -error="nil pointer" -o results.json
+
+# Analyze specific branch with verbose output
+./git-commit-analysis \
+  -branch="feature/auth" \
+  -error="401 unauthorized" \
+  -v
+
+# Use fewer workers to avoid rate limits
+./git-commit-analysis -error="timeout" -j 1 -n 20
 ```
 
-To silence logs and get a clean JSON stream:
+### Output Format (NDJSON)
+
+The tool outputs results in **Newline Delimited JSON (NDJSON)** format. Results stream in commit order as they become available. Output types are distinguished by the `type` field:
+
+| Type | Description |
+|------|-------------|
+| `"result"` | Analysis findings with `hash`, `message`, `probability`, `reasoning` |
+| `"log"` | Progress and status updates with `level`, `msg`, `timestamp` |
+| `"summary"` | Final summary with `total`, `high`, `medium`, `low`, `skipped`, `errors` |
+
+#### Pro-tip: Filter with `jq`
 
 ```bash
+# Show only high-probability commits
+./git-commit-analysis -error="..." | jq 'select(.type=="result" and .probability=="HIGH")'
+
+# Get clean result stream (no logs)
 ./git-commit-analysis -error="..." | jq 'select(.type=="result")'
+
+# Show just the summary
+./git-commit-analysis -error="..." | jq 'select(.type=="summary")'
 ```
 
 ---
@@ -87,19 +132,51 @@ To silence logs and get a clean JSON stream:
 ## Example Output
 
 ```json
-{"type":"log","level":"INFO","msg":"Cloning https://github.com/... into temporary directory...","timestamp":"2026-01-17T17:15:00Z"}
-{"type":"log","level":"INFO","msg":"Analyzing last 5 commits for error: \"interval must be greater than 0, got -2\"","timestamp":"2026-01-17T17:15:05Z"}
-{"type":"result","hash":"be8f779e","probability":"HIGH","reasoning":"The commit modifies NewTimeFilter to accept negative durations instead of ignoring them, which eventually reaches a ticker validation check."}
-{"type":"result","hash":"1c932131","probability":"MEDIUM","reasoning":"The commit modifies axis bounds calculation, which could potentially result in negative intervals in edge cases."}
-{"type":"result","hash":"26cb336c","probability":"LOW","reasoning":"Documentation only change."}
+{"type":"log","level":"INFO","msg":"Cloning https://github.com/... into temporary directory...","timestamp":"2026-01-18T10:15:00Z"}
+{"type":"log","level":"INFO","msg":"Analyzing last 5 commits for error: \"interval must be greater than 0, got -2\"","timestamp":"2026-01-18T10:15:05Z"}
+{"type":"result","hash":"be8f779e","message":"Allow negative durations in TimeFilter","probability":"HIGH","reasoning":"The commit modifies NewTimeFilter to accept negative durations instead of ignoring them, which eventually reaches a ticker validation check."}
+{"type":"result","hash":"1c932131","message":"Refactor axis bounds calculation","probability":"MEDIUM","reasoning":"The commit modifies axis bounds calculation, which could potentially result in negative intervals in edge cases."}
+{"type":"result","hash":"26cb336c","message":"Update README documentation","probability":"LOW","reasoning":"Documentation only change."}
+{"type":"summary","total":5,"high":1,"medium":1,"low":1,"skipped":2,"errors":0}
 ```
 
-### Flags
+---
+
+## File Filtering
+
+The tool automatically skips files that rarely cause logic bugs:
+
+| Category | Examples |
+|----------|----------|
+| **Lock files** | `go.sum`, `package-lock.json`, `yarn.lock`, `Cargo.lock`, `poetry.lock` |
+| **Test files** | `*_test.go`, `*.test.js`, `*.spec.ts`, `test_*.py` |
+| **Vendor/deps** | `vendor/`, `node_modules/` |
+| **Build output** | `dist/`, `build/`, `out/` |
+| **CI/CD** | `.github/workflows/`, `.gitlab-ci.yml`, `.travis.yml` |
+| **IDE config** | `.idea/`, `.vscode/` |
+| **Cache** | `__pycache__/`, `.pytest_cache/` |
+
+---
 
 ## Limitations & Notes
 
--   **Token Usage:** Analyzing large commits or many files consumes significant context. The tool attempts to filter irrelevant files (`.lock`, `_test.go`), but be mindful of costs.
--   **Rate Limits:** The tool processes commits concurrently (default: 3 workers). If you hit API rate limits, consider reducing `N` or adding retry logic.
+-   **Token Usage:** Analyzing large commits or many files consumes significant context. The tool filters irrelevant files and truncates large diffs (>50KB) automatically.
+-   **Rate Limits:** The tool includes automatic retry with exponential backoff for rate limit errors (429) and transient failures. Reduce `-j` workers if you still hit limits.
+-   **API Key Security:** Prefer the `GEMINI_API_KEY` environment variable over `-apikey` flag (command-line args are visible in process lists).
+
+## Development
+
+### Running Tests
+
+```bash
+go test ./... -v
+```
+
+### Building
+
+```bash
+go build -o git-commit-analysis ./cmd/git-commit-analysis
+```
 
 ## License
 
