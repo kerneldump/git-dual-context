@@ -13,5 +13,5 @@
 
 ## Phase 3: Verification & Integration
 - [x] Task: Verify that `stdout` remains valid NDJSON even when errors occur (errors should go to `stderr`). 94896cb
-- [ ] Task: Test the output by piping to `jq` to ensure compatibility.
+- [x] Task: Test the output by piping to `jq` to ensure compatibility. 0715b68
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Verification & Integration' (Protocol in workflow.md)
