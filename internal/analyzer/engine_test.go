@@ -50,11 +50,15 @@ func TestBuildPrompt(t *testing.T) {
 		"COMMIT CONTEXT",
 		"INPUT DATA",
 		"INSTRUCTIONS",
+		"SKEPTIC PERSONA",
+		"GLOBAL INSTRUCTION: Value Tracing",
+		"STEP 0: HYPOTHESIS GENERATION",
 		"STEP 1: MICRO-ANALYSIS",
 		"STEP 2: MACRO-ANALYSIS",
 		"STEP 3: CLASSIFICATION",
 		"HIGH|MEDIUM|LOW",
 		"OUTPUT FORMAT",
+		"Hypothesis:",
 	}
 
 	for _, section := range expectedSections {

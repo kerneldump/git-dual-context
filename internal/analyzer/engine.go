@@ -146,7 +146,10 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c *object.Commit, hea
 
 func buildPrompt(errorMsg string, c *object.Commit, stdDiff, fullDiff string) string {
 	return fmt.Sprintf(`
-You are an expert software debugger. Your task is to analyze a specific commit to determine if it introduced the bug described below.
+You are an expert software debugger and a rigorous technical skeptic. Your goal is to determine if a specific commit introduced the bug described below.
+
+SKEPTIC PERSONA:
+You must actively attempt to DISPROVE that this commit caused the bug. Assume the commit is safe unless you find a "smoking gun" (e.g., direct logic contradiction, enabling a path for an invalid value, removing a critical guard). If the evidence is circumstantial or the logic is merely "suspicious" but not demonstrably broken, you must lean towards a LOWER probability.
 
 BUG DESCRIPTION:
 %s
@@ -167,30 +170,37 @@ INPUT DATA:
 ---
 INSTRUCTIONS:
 
-Use the following "Chain of Thought" process to analyze the data. You must output your reasoning for each step.
+Follow this rigorous analytical process. You must output your reasoning for each step.
 
-STEP 1: MICRO-ANALYSIS
-Analyze the Standard Diff. What logic changed? Does it look risky?
+GLOBAL INSTRUCTION: Value Tracing
+Identify any specific numeric values or state-related terms in the BUG DESCRIPTION (e.g., "-2"). You MUST explicitly trace how these values could originate from or be affected by the logic in the provided diffs.
 
-STEP 2: MACRO-ANALYSIS
-Analyze the Full Comparison Diff. Does the code from this commit still exist in HEAD? Was it refactored? Does it conflict with the current system state?
+STEP 0: HYPOTHESIS GENERATION
+Based ONLY on the BUG DESCRIPTION, what are the most likely technical causes for this error? List 2-3 potential scenarios where this error could manifest.
+
+STEP 1: MICRO-ANALYSIS (Skeptical Review)
+Analyze the Standard Diff. What logic changed? Does it DIRECTLY produce the error? Look for unmasked paths where a previously ignored bad value can now reach a validation point.
+
+STEP 2: MACRO-ANALYSIS (Evolutionary Context)
+Analyze the Full Comparison Diff. Does the code from this commit still exist in HEAD? Was it refactored in a way that introduced the bug later? Does it conflict with the current system state?
 
 STEP 3: CLASSIFICATION
 Classify the probability based on these strict definitions:
-- HIGH: The commit contains logic that DIRECTLY contradicts the error message or introduces the specific bug (a "smoking gun").
-- MEDIUM: The commit modifies the relevant subsystem or variables, but the logic is not clearly broken. Warrants manual review.
-- LOW: The commit is unrelated (docs, assets, different subsystem, safe refactor).
+- HIGH: You found a "smoking gun." The commit contains logic that DIRECTLY contradicts the error message or enables the specific bug.
+- MEDIUM: The commit modifies relevant subsystems/variables and creates a plausible, though not certain, path for the bug. Warrants manual review.
+- LOW: No direct or plausible link found. The change is unrelated or the skeptic's doubts remain unaddressed.
 
 ---
 OUTPUT FORMAT:
 
-Reasoning: <Your Step-by-Step Chain of Thought Analysis>
+Hypothesis: <Potential causes based on description>
+Reasoning: <Step-by-Step Tracing and Analysis>
 Classification: <HIGH|MEDIUM|LOW>
 
 Finally, return the result in this JSON format (do not use markdown blocks):
 {
   "probability": "HIGH|MEDIUM|LOW",
-  "reasoning": "A concise summary of your analysis."
+  "reasoning": "A concise summary of your tracing and verdict."
 }
 `, errorMsg, c.Hash.String(), c.Message, stdDiff, fullDiff)
 }
