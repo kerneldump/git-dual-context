@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -124,13 +123,7 @@ func main() {
 		*numWorkers = 1
 	}
 	sem := make(chan struct{}, *numWorkers) // Limit to N concurrent requests
-	var resultsMutex sync.Mutex
-	type commitResult struct {
-		c   *object.Commit
-		res *analyzer.AnalysisResult
-		err error
-	}
-	var allResults []commitResult
+	var printMutex sync.Mutex
 
 	for _, c := range commits {
 		wg.Add(1)
@@ -141,66 +134,41 @@ func main() {
 			defer func() { <-sem }()
 
 			// Create a context with timeout for each request
-			reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			reqCtx, cancel := context.WithTimeout(ctx, 300*time.Second)
 			defer cancel()
 
 			// Analyze
 			res, err := analyzer.AnalyzeCommit(reqCtx, r, c, headRef.Hash(), *errorMsg, model)
 
-			resultsMutex.Lock()
-			allResults = append(allResults, commitResult{c, res, err})
-			resultsMutex.Unlock()
+			printMutex.Lock()
+			defer printMutex.Unlock()
+
+			if err != nil {
+				log.Printf("Failed to analyze commit %s: %v", c.Hash.String(), err)
+				return
+			}
+			if res.Skipped {
+				fmt.Printf("Commit: %s | [Skipped - No relevant code changes]\n", c.Hash.String()[:8])
+				fmt.Println("---------------------------------------------------")
+				return
+			}
+
+			color := ""
+			label := string(res.Probability)
+			switch res.Probability {
+			case analyzer.ProbHigh:
+				color = "\033[31m" // Red
+			case analyzer.ProbMedium:
+				color = "\033[33m" // Yellow
+			case analyzer.ProbLow:
+				color = "\033[32m" // Green
+			}
+
+			fmt.Printf("Commit: %s | Prob: %s%s\033[0m\n", c.Hash.String()[:8], color, label)
+			fmt.Printf("Reason: %s\n", res.Reasoning)
+			fmt.Println("---------------------------------------------------")
 		}(c)
 	}
 
 	wg.Wait()
-
-	// Sort Results: High -> Medium -> Low
-	sort.Slice(allResults, func(i, j int) bool {
-		return probValue(allResults[i].res) > probValue(allResults[j].res)
-	})
-
-	// Print Results
-	for _, res := range allResults {
-		if res.err != nil {
-			log.Printf("Failed to analyze commit %s: %v", res.c.Hash.String(), res.err)
-			continue
-		}
-		if res.res.Skipped {
-			fmt.Printf("Commit: %s | [Skipped - No relevant code changes]\n", res.c.Hash.String()[:8])
-			fmt.Println("---------------------------------------------------")
-			continue
-		}
-
-		color := ""
-		label := string(res.res.Probability)
-		switch res.res.Probability {
-		case analyzer.ProbHigh:
-			color = "\033[31m" // Red
-		case analyzer.ProbMedium:
-			color = "\033[33m" // Yellow
-		case analyzer.ProbLow:
-			color = "\033[32m" // Green
-		}
-
-		fmt.Printf("Commit: %s | Prob: %s%s\033[0m\n", res.c.Hash.String()[:8], color, label)
-		fmt.Printf("Reason: %s\n", res.res.Reasoning)
-		fmt.Println("---------------------------------------------------")
-	}
-}
-
-func probValue(res *analyzer.AnalysisResult) int {
-	if res == nil || res.Skipped {
-		return 0
-	}
-	switch res.Probability {
-	case analyzer.ProbHigh:
-		return 3
-	case analyzer.ProbMedium:
-		return 2
-	case analyzer.ProbLow:
-		return 1
-	default:
-		return 0
-	}
 }

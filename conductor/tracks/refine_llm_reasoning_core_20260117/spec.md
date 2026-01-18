@@ -4,12 +4,17 @@
 This track focuses on improving the accuracy and depth of the automated bug diagnosis by refining the reasoning engine. This involves optimizing the prompts sent to the Gemini model and adjusting the probabilistic framework that calculates the likelihood of a commit being the root cause of a bug.
 
 ## Objectives
+- Implement a 3-tier classification system (**High**, **Medium**, **Low**) to solve the calibration problem and reduce false positives.
 - Improve the precision of the LLM's identification of "sleeper bugs."
 - Enhance the clarity and depth of the reasoning provided by the LLM for its findings.
 - Ensure the probabilistic model correctly weighs signals from both the Micro (Standard Diff) and Macro (Full Comparison Diff) contexts.
 
 ## Scope
-- `internal/analyzer/engine.go`: Refine the logic for prompt construction and response parsing.
+- `internal/analyzer/engine.go`: Refine the logic for prompt construction and response parsing to support the new "Medium" classification.
+- **Classification Logic:**
+    - **HIGH:** "Smoking gun" logic that contradicts the error.
+    - **MEDIUM:** Modifies relevant subsystem/variables but logic is ambiguous.
+    - **LOW:** Unrelated changes.
 - Prompts: Iterate on the system and user prompts to provide better context and guidance to the LLM.
 - Probability Calculation: Adjust the weights and logic used to derive $P(H_k|E)$.
 
