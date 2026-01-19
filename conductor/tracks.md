@@ -4,6 +4,12 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
+- [ ] **Track: Maintainability & Testing Improvements**
+*Link: [./tracks/maintainability_and_testing_20260118/](./tracks/maintainability_and_testing_20260118/)*
+*Description: Implementation of high and medium priority code review recommendations focusing on reliability, testing, and code standards.*
+
+---
+
 - [x] **Track: Refine LLM Reasoning Core**
   *Link: [./tracks/refine_llm_reasoning_core_20260117/](./tracks/refine_llm_reasoning_core_20260117/)*
 
