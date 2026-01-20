@@ -7,12 +7,12 @@
 - [x] Task: Verify successful build of CLI and passing tests (`go test ./...`). [35ffd7b]
 - [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md) [ea90cdb]
 
-## Phase 2: API Surface Audit & Polish
-- [x] Task: Audit `pkg/analyzer` for unexported symbols that should be public; rename and add docs. [d3b0709]
-- [x] Task: Audit `pkg/gitdiff` for unexported symbols that should be public; rename and add docs. [d3b0709]
-- [x] Task: Create `pkg/analyzer/doc.go` with package-level documentation. [d3b0709]
-- [x] Task: Create `pkg/gitdiff/doc.go` with package-level documentation. [d3b0709]
-- [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
+## Phase 2: API Surface Audit & Polish [checkpoint: 3412c3e]
+- [x] Task: Audit `pkg/analyzer` for unexported symbols that should be public; rename and add docs. [f0320eb]
+- [x] Task: Audit `pkg/gitdiff` for unexported symbols that should be public; rename and add docs. [f0320eb]
+- [x] Task: Create `pkg/analyzer/doc.go` with package-level documentation. [f0320eb]
+- [x] Task: Create `pkg/gitdiff/doc.go` with package-level documentation. [f0320eb]
+- [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md) [3412c3e]
 
 ## Phase 3: Documentation & Examples
 - [ ] Task: Create `examples/basic_usage/main.go` demonstrating library usage.
