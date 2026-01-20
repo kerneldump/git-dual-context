@@ -104,7 +104,75 @@ go build -o git-commit-analysis ./cmd/git-commit-analysis
 ./git-commit-analysis -error="timeout" -j 1 -n 20
 ```
 
-### Output Format (NDJSON)
+---
+
+## Library Usage
+
+`git-dual-context` can be used as a library in your Go projects.
+
+### Installation
+
+```bash
+go get github.com/your-username/git-dual-context
+```
+
+### Basic Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/your-username/git-dual-context/pkg/analyzer"
+	"github.com/go-git/go-git/v5"
+	"github.com/google/generative-ai-go/genai"
+	"google.golang.org/api/option"
+)
+
+func main() {
+	ctx := context.Background()
+	apiKey := os.Getenv("GEMINI_API_KEY")
+
+	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
+
+	model := client.GenerativeModel("models/gemini-1.5-pro")
+	repo, _ := git.PlainOpen(".")
+	headRef, _ := repo.Head()
+	headCommit, _ := repo.CommitObject(headRef.Hash())
+
+	errorMsg := "The system is returning a 500 error on the /login endpoint"
+	
+	// Perform the dual-context analysis
+	result, err := analyzer.AnalyzeCommit(ctx, repo, headCommit, headCommit, errorMsg, model)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if !result.Skipped {
+		fmt.Printf("Probability: %s\n", result.Probability)
+		fmt.Printf("Reasoning: %s\n", result.Reasoning)
+	}
+}
+```
+
+For more details, see [examples/basic_usage/main.go](examples/basic_usage/main.go).
+
+### Core Packages
+
+-   **`pkg/analyzer`:** The reasoning engine. Handles prompt construction, LLM interaction, and response parsing.
+-   **`pkg/gitdiff`:** Diff extraction and filtering logic. Handles standard and evolutionary diff generation.
+
+---
+
+## Output Format (NDJSON)
 
 The tool outputs results in **Newline Delimited JSON (NDJSON)** format. Results stream in commit order as they become available. Output types are distinguished by the `type` field:
 

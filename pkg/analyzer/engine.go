@@ -18,11 +18,15 @@ import (
 type Probability string
 
 const (
+	// ProbHigh indicates a high probability that the commit caused the bug.
 	ProbHigh   Probability = "HIGH"
+	// ProbMedium indicates a medium probability that warrants manual review.
 	ProbMedium Probability = "MEDIUM"
+	// ProbLow indicates a low probability with no clear link to the bug.
 	ProbLow    Probability = "LOW"
 )
 
+// UnmarshalJSON customizes the unmarshaling of Probability from JSON.
 func (p *Probability) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
