@@ -1,4 +1,4 @@
-module git-commit-analysis
+module github.com/kerneldump/git-dual-context
 
 go 1.25.5
 
