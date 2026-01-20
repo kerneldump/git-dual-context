@@ -33,3 +33,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Code Review Fixes**
 *Link: [./tracks/code_review_fixes_20260118/](./tracks/code_review_fixes_20260118/)*
 *Description: Comprehensive code review fixes including critical bugs, retry logic, ordered streaming output, new CLI options, expanded file filtering, testing, and security improvements.*
+
+---
+
+- [~] **Track: Library Refactor (internal to pkg)**
+*Link: [./tracks/library_refactor_20260120/](./tracks/library_refactor_20260120/)*
