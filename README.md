@@ -40,7 +40,7 @@ This tool is the reference implementation for the paper:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/git-dual-context.git
+git clone https://github.com/kerneldump/git-dual-context.git
 cd git-dual-context
 
 # Build the binary
@@ -113,7 +113,7 @@ go build -o git-commit-analysis ./cmd/git-commit-analysis
 ### Installation
 
 ```bash
-go get github.com/your-username/git-dual-context
+go get github.com/kerneldump/git-dual-context
 ```
 
 ### Basic Example
@@ -127,7 +127,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/your-username/git-dual-context/pkg/analyzer"
+	"github.com/kerneldump/git-dual-context/pkg/analyzer"
 	"github.com/go-git/go-git/v5"
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
