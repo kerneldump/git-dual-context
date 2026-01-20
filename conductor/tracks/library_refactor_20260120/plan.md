@@ -14,8 +14,8 @@
 - [x] Task: Create `pkg/gitdiff/doc.go` with package-level documentation. [f0320eb]
 - [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md) [3412c3e]
 
-## Phase 3: Documentation & Examples [checkpoint: b17a80c]
-- [x] Task: Create `examples/basic_usage/main.go` demonstrating library usage. [048f3e5]
-- [x] Task: Update `README.md` with "Library Usage" section and snippets from the example. [048f3e5]
-- [x] Task: Ensure all exported functions/types have GoDoc comments. [048f3e5]
-- [x] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md) [b17a80c]
+## Phase 3: Documentation & Examples [checkpoint: ab139c4]
+- [x] Task: Create `examples/basic_usage/main.go` demonstrating library usage. [82a6e00]
+- [x] Task: Update `README.md` with "Library Usage" section and snippets from the example. [82a6e00]
+- [x] Task: Ensure all exported functions/types have GoDoc comments. [82a6e00]
+- [x] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md) [ab139c4]
