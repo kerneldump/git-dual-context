@@ -43,7 +43,7 @@ func TestBuildPrompt(t *testing.T) {
 	stdDiff := "std diff content"
 	fullDiff := "full diff content"
 
-	prompt := buildPrompt(errorMsg, c, stdDiff, fullDiff)
+	prompt := BuildPrompt(errorMsg, c, stdDiff, fullDiff)
 
 	expectedSections := []string{
 		"BUG DESCRIPTION",
@@ -78,7 +78,7 @@ STEP 2: ...
   "reasoning": "noisy response test"
 }
 `
-	cleanTxt := findJSONBlock(input)
+	cleanTxt := FindJSONBlock(input)
 	var res AnalysisResult
 	if err := json.Unmarshal([]byte(cleanTxt), &res); err != nil {
 		t.Fatalf("failed to unmarshal: %v", err)
@@ -205,7 +205,7 @@ Also checking for edge cases like {}.
 `
 	// We want the extraction logic to be smart enough to find the *actual* JSON object
 	// For now, let's verify if the current regex finds it.
-	cleanTxt := findJSONBlock(input)
+	cleanTxt := FindJSONBlock(input)
 
 	var res AnalysisResult
 	if err := json.Unmarshal([]byte(cleanTxt), &res); err != nil {

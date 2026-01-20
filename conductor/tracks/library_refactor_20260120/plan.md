@@ -8,10 +8,10 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md) [ea90cdb]
 
 ## Phase 2: API Surface Audit & Polish
-- [ ] Task: Audit `pkg/analyzer` for unexported symbols that should be public; rename and add docs.
-- [ ] Task: Audit `pkg/gitdiff` for unexported symbols that should be public; rename and add docs.
-- [ ] Task: Create `pkg/analyzer/doc.go` with package-level documentation.
-- [ ] Task: Create `pkg/gitdiff/doc.go` with package-level documentation.
+- [x] Task: Audit `pkg/analyzer` for unexported symbols that should be public; rename and add docs. [d3b0709]
+- [x] Task: Audit `pkg/gitdiff` for unexported symbols that should be public; rename and add docs. [d3b0709]
+- [x] Task: Create `pkg/analyzer/doc.go` with package-level documentation. [d3b0709]
+- [x] Task: Create `pkg/gitdiff/doc.go` with package-level documentation. [d3b0709]
 - [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
 
 ## Phase 3: Documentation & Examples

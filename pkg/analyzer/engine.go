@@ -130,7 +130,7 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c, headCommit *object
 	}
 
 	// 3. Construct Prompt
-	prompt := buildPrompt(errorMsg, c, stdDiff, fullDiff)
+	prompt := BuildPrompt(errorMsg, c, stdDiff, fullDiff)
 
 	// 4. Call Gemini
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
@@ -149,7 +149,7 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c, headCommit *object
 	for _, part := range resp.Candidates[0].Content.Parts {
 		if txt, ok := part.(genai.Text); ok {
 			found = true
-			cleanTxt := findJSONBlock(string(txt))
+			cleanTxt := FindJSONBlock(string(txt))
 			if cleanTxt == "" {
 				return nil, fmt.Errorf("no JSON found in response for %s", c.Hash.String()[:8])
 			}
@@ -167,8 +167,9 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c, headCommit *object
 	return &result, nil
 }
 
-
-func buildPrompt(errorMsg string, c *object.Commit, stdDiff, fullDiff string) string {
+// BuildPrompt constructs the multi-step analytical prompt for the LLM.
+// It incorporates the bug description, commit diffs, and the skeptical persona instructions.
+func BuildPrompt(errorMsg string, c *object.Commit, stdDiff, fullDiff string) string {
 	return fmt.Sprintf(`
 You are an expert software debugger and a rigorous technical skeptic. Your goal is to determine if a specific commit introduced the bug described below.
 
@@ -229,9 +230,9 @@ Finally, return the result in this JSON format (do not use markdown blocks):
 `, errorMsg, c.Hash.String(), c.Message, stdDiff, fullDiff)
 }
 
-// findJSONBlock attempts to find the largest valid JSON object in the text.
+// FindJSONBlock attempts to find the largest valid JSON object in the text.
 // It scans from the last '}' backwards to find a matching '{'.
-func findJSONBlock(text string) string {
+func FindJSONBlock(text string) string {
 	end := strings.LastIndex(text, "}")
 	if end == -1 {
 		return ""
