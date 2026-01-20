@@ -36,5 +36,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Library Refactor (internal to pkg)**
+- [x] **Track: Library Refactor (internal to pkg)**
 *Link: [./tracks/library_refactor_20260120/](./tracks/library_refactor_20260120/)*
