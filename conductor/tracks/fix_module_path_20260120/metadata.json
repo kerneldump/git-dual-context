@@ -1,0 +1,8 @@
+{
+  "track_id": "fix_module_path_20260120",
+  "type": "bug_fix",
+  "status": "new",
+  "created_at": "2026-01-20T11:45:00Z",
+  "updated_at": "2026-01-20T11:45:00Z",
+  "description": "Update the go.mod module path to the canonical GitHub URL to enable external library usage."
+}

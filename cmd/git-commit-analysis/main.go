@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"git-commit-analysis/pkg/analyzer"
+	"github.com/kerneldump/git-dual-context/pkg/analyzer"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"git-commit-analysis/pkg/gitdiff"
+	"github.com/kerneldump/git-dual-context/pkg/gitdiff"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
