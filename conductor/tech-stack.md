@@ -20,7 +20,8 @@
     - Rationale: Ensures deterministic and reproducible LLM outputs for technical analysis.
 
 ## Architecture
-- **Structure:** Standard Go Project Layout
+- **Structure:** Standard Go Library Layout
     - `cmd/`: Contains the main entry points for tool executables.
-    - `internal/`: Houses private packages for core logic, including `analyzer` (the reasoning engine) and `gitdiff` (context extraction).
+    - `pkg/`: Public library packages including `analyzer` (the reasoning engine) and `gitdiff` (context extraction).
+    - `examples/`: Standalone examples demonstrating library usage.
 - **Pattern:** Modular component-based design for AI providers and data extraction.

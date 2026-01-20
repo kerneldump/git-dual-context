@@ -8,6 +8,10 @@
 *.so
 *.dylib
 /git-commit-analysis
+/main
+
+# Examples binaries
+examples/*/main
 
 # Test binary, built with `go test -c`
 *.test
