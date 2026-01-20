@@ -2,9 +2,9 @@
 
 ## Phase 1: Structure Migration & Refactoring
 - [x] Task: Move `internal/analyzer` to `pkg/analyzer` and `internal/gitdiff` to `pkg/gitdiff`. [3aef27a]
-- [~] Task: Update import paths in `cmd/git-commit-analysis/main.go` and across `pkg/` packages.
-- [ ] Task: Update `engine_test.go` and `diff_test.go` to use the new package paths.
-- [ ] Task: Verify successful build of CLI and passing tests (`go test ./...`).
+- [x] Task: Update import paths in `cmd/git-commit-analysis/main.go` and across `pkg/` packages. [f67332b]
+- [x] Task: Update `engine_test.go` and `diff_test.go` to use the new package paths. [f67332b]
+- [x] Task: Verify successful build of CLI and passing tests (`go test ./...`). [f67332b]
 - [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: API Surface Audit & Polish

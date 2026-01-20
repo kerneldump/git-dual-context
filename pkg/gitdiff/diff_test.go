@@ -56,7 +56,7 @@ func TestShouldIgnoreFile(t *testing.T) {
 
 		// Should NOT ignore
 		{"Go source", "main.go", false},
-		{"Go source in pkg", "internal/analyzer/engine.go", false},
+		{"Go source in pkg", "pkg/analyzer/engine.go", false},
 		{"JS source", "src/index.js", false},
 		{"TS source", "src/index.ts", false},
 		{"Config file", "config.yaml", false},
