@@ -49,7 +49,7 @@ func main() {
 
 	// 3. Analyze a Commit (in this example, we analyze HEAD)
 	errorMsg := "The system is returning a 500 error on the /login endpoint"
-	
+
 	result, err := analyzer.AnalyzeCommit(ctx, repo, headCommit, headCommit, errorMsg, model)
 	if err != nil {
 		log.Fatalf("Analysis failed: %v", err)

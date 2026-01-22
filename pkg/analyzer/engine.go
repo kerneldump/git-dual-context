@@ -19,11 +19,11 @@ type Probability string
 
 const (
 	// ProbHigh indicates a high probability that the commit caused the bug.
-	ProbHigh   Probability = "HIGH"
+	ProbHigh Probability = "HIGH"
 	// ProbMedium indicates a medium probability that warrants manual review.
 	ProbMedium Probability = "MEDIUM"
 	// ProbLow indicates a low probability with no clear link to the bug.
-	ProbLow    Probability = "LOW"
+	ProbLow Probability = "LOW"
 )
 
 // UnmarshalJSON customizes the unmarshaling of Probability from JSON.
@@ -245,7 +245,7 @@ func FindJSONBlock(text string) string {
 	// Simple heuristic: find the last '}' and the first '{' before it
 	// But simply finding the first '{' might match too early (e.g. nested braces in reasoning text).
 	// So we can try to parse from every '{' found before 'end' until we succeed.
-	
+
 	// Optimization: Start searching for '{' from the end backwards.
 	for start := strings.LastIndex(text[:end], "{"); start != -1; start = strings.LastIndex(text[:start], "{") {
 		candidate := text[start : end+1]
@@ -258,7 +258,6 @@ func FindJSONBlock(text string) string {
 			return candidate
 		}
 	}
-	
+
 	return ""
 }
-

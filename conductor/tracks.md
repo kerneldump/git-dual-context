@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Makefile Implementation**
+- [~] **Track: Makefile Implementation**
 *Link: [./tracks/makefile_20260122/](./tracks/makefile_20260122/)*

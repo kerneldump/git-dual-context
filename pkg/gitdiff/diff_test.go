@@ -83,11 +83,11 @@ func TestShouldIgnoreFile(t *testing.T) {
 
 func TestTruncateDiff(t *testing.T) {
 	tests := []struct {
-		name            string
-		input           string
-		maxSize         int
-		shouldTruncate  bool
-		containsMarker  bool
+		name           string
+		input          string
+		maxSize        int
+		shouldTruncate bool
+		containsMarker bool
 	}{
 		{
 			name:           "no truncation needed",

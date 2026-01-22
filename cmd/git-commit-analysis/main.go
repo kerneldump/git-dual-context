@@ -32,12 +32,12 @@ type commitResult struct {
 
 // orderedPrinter handles streaming results in commit order
 type orderedPrinter struct {
-	encoder    *json.Encoder
-	mu         sync.Mutex
-	results    map[int]*commitResult // buffered results waiting to print
+	encoder     *json.Encoder
+	mu          sync.Mutex
+	results     map[int]*commitResult // buffered results waiting to print
 	nextToPrint int                   // next index we're waiting to print
-	total      int                    // total number of commits
-	
+	total       int                   // total number of commits
+
 	// Summary counters
 	high    int
 	medium  int
@@ -59,17 +59,17 @@ func newOrderedPrinter(encoder *json.Encoder, total int) *orderedPrinter {
 func (p *orderedPrinter) submit(r *commitResult) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	// Store the result
 	p.results[r.index] = r
-	
+
 	// Print all consecutive results starting from nextToPrint
 	for {
 		result, ok := p.results[p.nextToPrint]
 		if !ok {
 			break // Next result not ready yet
 		}
-		
+
 		p.printResult(result)
 		delete(p.results, p.nextToPrint)
 		p.nextToPrint++
@@ -112,7 +112,7 @@ func (p *orderedPrinter) printResult(r *commitResult) {
 func (p *orderedPrinter) summary() analyzer.Summary {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	return analyzer.Summary{
 		Type:    "summary",
 		Total:   p.total,
