@@ -106,6 +106,16 @@ go build -o git-commit-analysis ./cmd/git-commit-analysis
 
 ---
 
+## Model Context Protocol (MCP)
+
+This tool is available as an **MCP Server**, allowing you to use it directly within AI agents (like Gemini-CLI, Claude Desktop, or Cursor) to diagnose bugs in your local repositories.
+
+The server exposes the `analyze_root_cause` tool, which wraps the core dual-context analysis logic.
+
+For installation and usage instructions, see [cmd/mcp-server/README.md](cmd/mcp-server/README.md).
+
+---
+
 ## Library Usage
 
 `git-dual-context` can be used as a library in your Go projects.
