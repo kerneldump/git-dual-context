@@ -1,8 +1,0 @@
-{
-  "id": "maintainability_and_testing_20260118",
-  "name": "Maintainability & Testing Improvements",
-  "description": "Implementation of high and medium priority code review recommendations focusing on reliability, testing, and code standards.",
-  "status": "planned",
-  "start_date": "2026-01-18",
-  "priority": "high"
-}
