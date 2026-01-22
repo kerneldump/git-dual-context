@@ -43,3 +43,9 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Fix Module Path**
 *Link: [./tracks/fix_module_path_20260120/](./tracks/fix_module_path_20260120/)*
+
+---
+
+- [x] **Track: MCP Server Integration**
+*Link: [./tracks/mcp_server_integration_20260122/](./tracks/mcp_server_integration_20260122/)*
+*Description: Integrated the POC MCP server into the main repository structure (cmd/mcp-server), updated dependencies, and verified build compatibility with SDK v1.2.0.*

@@ -9,6 +9,7 @@
 *.dylib
 /git-commit-analysis
 /main
+/mcp-server
 
 # Examples binaries
 examples/*/main
@@ -35,3 +36,4 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+.gemini/
