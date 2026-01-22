@@ -25,3 +25,10 @@
     - `pkg/`: Public library packages including `analyzer` (the reasoning engine) and `gitdiff` (context extraction).
     - `examples/`: Standalone examples demonstrating library usage.
 - **Pattern:** Modular component-based design for AI providers and data extraction.
+
+## Build & Quality Tools
+- **Build System:** `make` (GNU Make)
+    - Purpose: Standardizes build, test, and maintenance commands across environments.
+- **Linter:** `golangci-lint` (Recommended)
+    - Purpose: Enforces code quality and catches static analysis errors.
+
