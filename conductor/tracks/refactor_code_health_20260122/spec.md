@@ -14,6 +14,7 @@ This track addresses technical debt and architectural improvements identified du
 - [ ] Consolidate core analysis logic into a reusable `pkg/analyzer/runner.go`.
 - [ ] Decouple the analysis engine from the LLM provider using an interface.
 - [ ] Improve code readability and standards (constants, validation, error wrapping).
+- [ ] Enable real-time streaming of detailed analysis results (Reasoning, Probability) via MCP logs.
 
 ## Proposed Changes
 

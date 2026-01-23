@@ -8,8 +8,9 @@
 ## Phase 2: Core Refactoring (The Engine)
 - [ ] Task: Define `LLMProvider` interface and `GeminiProvider` implementation in `pkg/analyzer`.
 - [ ] Task: Create `pkg/analyzer/runner.go` and implement `RunAnalysis` logic.
-- [ ] Task: Refactor `cmd/git-commit-analysis/main.go` to use the shared `RunAnalysis` engine.
-- [ ] Task: Refactor `cmd/mcp-server/internal/tools/rootcause.go` to use the shared `RunAnalysis` engine.
+- [ ] Task: Update `RunAnalysis` callback to support detailed result objects (streaming).
+- [ ] Task: Refactor `cmd/git-commit-analysis` to use the shared `RunAnalysis` engine.
+- [ ] Task: Refactor `cmd/mcp-server/internal/tools/rootcause.go` to use the shared `RunAnalysis` engine with detailed streaming logs.
 - [ ] Task: Remove redundant ordering and aggregation logic from command packages.
 
 ## Phase 3: Integration & Quality
