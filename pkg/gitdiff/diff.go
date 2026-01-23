@@ -56,6 +56,10 @@ func GetStandardDiff(c, parent *object.Commit) (string, []string, error) {
 	}
 
 	// Diff parent -> commit
+	// For the first commit (no parent), pTree will be nil and Patch handles it correctly
+	if pTree == nil && parent != nil {
+		return "", nil, fmt.Errorf("parent tree is nil despite parent commit existing")
+	}
 	patch, err := pTree.Patch(cTree)
 	if err != nil {
 		return "", nil, err

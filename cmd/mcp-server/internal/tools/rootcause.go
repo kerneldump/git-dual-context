@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/kerneldump/git-dual-context/pkg/analyzer"
+	"github.com/kerneldump/git-dual-context/pkg/validator"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -72,6 +73,23 @@ func AnalyzeRootCause(ctx context.Context, input AnalyzeInput, progress func(str
 	}
 	if input.Concurrency <= 0 {
 		input.Concurrency = 3
+	}
+
+	// Validate inputs
+	if err := validator.ValidateErrorMessage(input.ErrorMessage); err != nil {
+		return nil, fmt.Errorf("invalid error message: %w", err)
+	}
+	if err := validator.ValidateNumCommits(input.NumCommits); err != nil {
+		return nil, fmt.Errorf("invalid number of commits: %w", err)
+	}
+	if err := validator.ValidateNumWorkers(input.Concurrency); err != nil {
+		return nil, fmt.Errorf("invalid concurrency value: %w", err)
+	}
+	if err := validator.ValidateBranchName(input.Branch); err != nil {
+		return nil, fmt.Errorf("invalid branch name: %w", err)
+	}
+	if err := validator.ValidateRepoPath(input.RepoPath); err != nil {
+		return nil, fmt.Errorf("invalid repository path: %w", err)
 	}
 
 	// Get API key from environment
@@ -242,21 +260,9 @@ func AnalyzeRootCause(ctx context.Context, input AnalyzeInput, progress func(str
 			output.Summary.Low++
 		}
 
-		// Truncate commit message to first line
-		message := r.commit.Message
-		for i, ch := range message {
-			if ch == '\n' {
-				message = message[:i]
-				break
-			}
-		}
-		if len(message) > 80 {
-			message = message[:77] + "..."
-		}
-
 		output.Results = append(output.Results, CommitResult{
 			Hash:        r.commit.Hash.String()[:8],
-			Message:     message,
+			Message:     analyzer.TruncateCommitMessage(r.commit.Message, 80),
 			Probability: string(r.result.Probability),
 			Reasoning:   r.result.Reasoning,
 		})

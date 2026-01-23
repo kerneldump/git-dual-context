@@ -90,16 +90,10 @@ func NewLogEntry(level, msg string) LogEntry {
 
 // ToJSONResult converts an internal AnalysisResult to the CLI-friendly JSONResult
 func (ar *AnalysisResult) ToJSONResult(hash string, message string) JSONResult {
-	// Truncate message to first line
-	firstLine := strings.Split(message, "\n")[0]
-	if len(firstLine) > 80 {
-		firstLine = firstLine[:77] + "..."
-	}
-
 	return JSONResult{
 		Type:        "result",
 		Hash:        hash,
-		Message:     firstLine,
+		Message:     TruncateCommitMessage(message, 80),
 		Probability: ar.Probability,
 		Reasoning:   ar.Reasoning,
 	}

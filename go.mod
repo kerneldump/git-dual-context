@@ -7,6 +7,7 @@ require (
 	github.com/google/generative-ai-go v0.20.1
 	github.com/modelcontextprotocol/go-sdk v1.2.0
 	google.golang.org/api v0.260.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

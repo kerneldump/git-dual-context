@@ -1,0 +1,81 @@
+# Example Configuration for git-dual-context
+# Copy this to one of the following locations:
+#   - .git-dual-context.yaml (current directory)
+#   - ~/.config/git-dual-context/config.yaml
+#   - ~/.git-dual-context.yaml
+
+# LLM Configuration
+llm:
+  # Provider: gemini, openai, or anthropic (future)
+  provider: gemini
+
+  # Model to use for analysis
+  # Gemini: gemini-3-pro-preview, gemini-1.5-pro, gemini-1.5-flash
+  # OpenAI: gpt-4, gpt-4-turbo (future support)
+  model: gemini-3-pro-preview
+
+  # API key (can also be set via environment variable)
+  # Recommended: Use GEMINI_API_KEY environment variable instead
+  # api_key: your-api-key-here
+
+  # Temperature for LLM responses (0.0 to 1.0)
+  # Lower = more deterministic, Higher = more creative
+  temperature: 0.1
+
+  # Timeout for each LLM request
+  # Valid units: s (seconds), m (minutes), h (hours)
+  timeout: 5m
+
+# Analysis Configuration
+analysis:
+  # Default number of commits to analyze if not specified
+  default_commits: 5
+
+  # Maximum diff size in characters before truncation
+  # Large diffs are expensive for LLM context windows
+  max_diff_size: 50000
+
+  # Whether to skip merge commits during analysis
+  # Merge commits rarely introduce bugs themselves
+  skip_merge_commits: true
+
+  # Additional file patterns to exclude (glob patterns)
+  # By default, lock files, tests, and vendor dirs are excluded
+  file_filters:
+    # - "*.generated.go"
+    # - "vendor/**"
+    # - "*.min.js"
+
+# Performance Configuration
+performance:
+  # Default number of concurrent workers
+  # Higher = faster but more API costs and resource usage
+  # Note: MCP server always uses sequential processing
+  workers: 3
+
+  # Maximum number of retries for failed API calls
+  max_retries: 3
+
+  # Base delay for exponential backoff (e.g., 1s, 2s, 4s, ...)
+  retry_base_delay: 1s
+
+  # Maximum delay between retries (cap for exponential backoff)
+  retry_max_delay: 30s
+
+# Output Configuration
+output:
+  # Output format: json, text, or markdown
+  format: json
+
+  # Enable verbose logging (useful for debugging)
+  verbose: false
+
+  # Maximum length for commit messages in output
+  # Messages are truncated to first line and this length
+  commit_message_max_length: 80
+
+# Notes:
+# - Command-line flags always override config file values
+# - Environment variables (GEMINI_API_KEY) override config file
+# - Config file is optional; defaults are used if not found
+# - Use 'make help' to see all available commands

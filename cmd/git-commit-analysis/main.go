@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/kerneldump/git-dual-context/pkg/analyzer"
+	"github.com/kerneldump/git-dual-context/pkg/validator"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -44,6 +45,9 @@ type orderedPrinter struct {
 	low     int
 	skipped int
 	errors  int
+
+	// Error tracking
+	encodeErrors int
 }
 
 func newOrderedPrinter(encoder *json.Encoder, total int) *orderedPrinter {
@@ -79,7 +83,10 @@ func (p *orderedPrinter) submit(r *commitResult) {
 // printResult outputs a single result and updates counters
 func (p *orderedPrinter) printResult(r *commitResult) {
 	if r.err != nil {
-		p.encoder.Encode(analyzer.NewLogEntry("ERROR", fmt.Sprintf("Failed to analyze commit %s: %v", r.commit.Hash.String(), r.err)))
+		if err := p.encoder.Encode(analyzer.NewLogEntry("ERROR", fmt.Sprintf("Failed to analyze commit %s: %v", r.commit.Hash.String(), r.err))); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to encode error log: %v\n", err)
+			p.encodeErrors++
+		}
 		p.errors++
 		return
 	}
@@ -88,7 +95,10 @@ func (p *orderedPrinter) printResult(r *commitResult) {
 		return
 	}
 	if r.result.Skipped {
-		p.encoder.Encode(analyzer.NewLogEntry("INFO", fmt.Sprintf("Commit: %s | [Skipped - No relevant code changes]", r.commit.Hash.String()[:8])))
+		if err := p.encoder.Encode(analyzer.NewLogEntry("INFO", fmt.Sprintf("Commit: %s | [Skipped - No relevant code changes]", r.commit.Hash.String()[:8]))); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to encode skip log: %v\n", err)
+			p.encodeErrors++
+		}
 		p.skipped++
 		return
 	}
@@ -105,7 +115,10 @@ func (p *orderedPrinter) printResult(r *commitResult) {
 
 	// Encode and print as JSON with commit message
 	jr := r.result.ToJSONResult(r.commit.Hash.String()[:8], r.commit.Message)
-	p.encoder.Encode(jr)
+	if err := p.encoder.Encode(jr); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to encode result: %v\n", err)
+		p.encodeErrors++
+	}
 }
 
 // summary returns the final summary
@@ -163,7 +176,9 @@ func main() {
 	logJSON := func(level, msg string) {
 		logMutex.Lock()
 		defer logMutex.Unlock()
-		encoder.Encode(analyzer.NewLogEntry(level, msg))
+		if err := encoder.Encode(analyzer.NewLogEntry(level, msg)); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to encode log entry: %v\n", err)
+		}
 	}
 
 	fatalJSON := func(msg string) {
@@ -175,8 +190,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *errorMsg == "" {
-		fatalJSON("Please provide an error message using -error")
+	// Validate inputs
+	if err := validator.ValidateErrorMessage(*errorMsg); err != nil {
+		fatalJSON(fmt.Sprintf("Invalid error message: %v", err))
+	}
+
+	if err := validator.ValidateNumCommits(*numCommits); err != nil {
+		fatalJSON(fmt.Sprintf("Invalid number of commits: %v", err))
+	}
+
+	if err := validator.ValidateNumWorkers(*numWorkers); err != nil {
+		fatalJSON(fmt.Sprintf("Invalid number of workers: %v", err))
+	}
+
+	if err := validator.ValidateBranchName(*branch); err != nil {
+		fatalJSON(fmt.Sprintf("Invalid branch name: %v", err))
+	}
+
+	if err := validator.ValidateRepoPath(*repoPath); err != nil {
+		fatalJSON(fmt.Sprintf("Invalid repository path: %v", err))
 	}
 
 	key := *apiKey
@@ -351,5 +383,7 @@ func main() {
 	}
 
 	// Output summary
-	encoder.Encode(printer.summary())
+	if err := encoder.Encode(printer.summary()); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to encode summary: %v\n", err)
+	}
 }
