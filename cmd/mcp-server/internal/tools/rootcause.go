@@ -7,8 +7,11 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/kerneldump/git-dual-context/pkg/analyzer"
+	"github.com/kerneldump/git-dual-context/pkg/config"
 	"github.com/kerneldump/git-dual-context/pkg/validator"
 
 	"github.com/go-git/go-git/v5"
@@ -41,9 +44,11 @@ type AnalyzeSummary struct {
 	High    int `json:"high"`
 	Medium  int `json:"medium"`
 	Low     int `json:"low"`
-	Skipped int `json:"skipped"`
-	Errors  int `json:"errors"`
-}
+			Skipped  int    `json:"skipped"`
+			Errors   int    `json:"errors"`
+			Duration string `json:"duration"`
+			Model    string `json:"model"`
+		}
 
 // AnalyzeOutput represents the output of the analyze_root_cause tool
 type AnalyzeOutput struct {
@@ -67,12 +72,15 @@ type commitResultInternal struct {
 
 // AnalyzeRootCause performs dual-context analysis on a git repository
 func AnalyzeRootCause(ctx context.Context, input AnalyzeInput, progress func(string)) (*AnalyzeOutput, error) {
-	// Apply defaults
+	// Load config for defaults
+	cfg, _ := config.LoadConfig(config.FindConfigFile())
+
+	// Apply defaults from config
 	if input.NumCommits <= 0 {
-		input.NumCommits = 5
+		input.NumCommits = cfg.Analysis.DefaultCommits
 	}
 	if input.Concurrency <= 0 {
-		input.Concurrency = 3
+		input.Concurrency = cfg.Performance.Workers
 	}
 
 	// Validate inputs
@@ -98,10 +106,10 @@ func AnalyzeRootCause(ctx context.Context, input AnalyzeInput, progress func(str
 		return nil, fmt.Errorf("GEMINI_API_KEY environment variable is required")
 	}
 
-	// Get model from environment or use default
+	// Get model from environment or use config default
 	modelName := os.Getenv("GEMINI_MODEL")
 	if modelName == "" {
-		modelName = "gemini-3-pro-preview"
+		modelName = cfg.LLM.Model
 	}
 
 	// Open the repository
@@ -138,8 +146,12 @@ func AnalyzeRootCause(ctx context.Context, input AnalyzeInput, progress func(str
 	}
 	defer client.Close()
 
+	if progress != nil {
+		progress(fmt.Sprintf("Using LLM model: %s", modelName))
+	}
+
 	model := client.GenerativeModel(modelName)
-	model.SetTemperature(0.1)
+	model.SetTemperature(cfg.LLM.Temperature)
 
 	// Collect commits
 	cIter, err := repo.Log(&git.LogOptions{From: headRef.Hash()})
@@ -174,66 +186,141 @@ func AnalyzeRootCause(ctx context.Context, input AnalyzeInput, progress func(str
 		}, nil
 	}
 
-	// Process commits sequentially to avoid go-git race conditions
-	// Note: go-git's ObjectStorage is not thread-safe for concurrent access
-	results := make([]*commitResultInternal, len(commits))
+	startTime := time.Now()
 
-	log.Printf("Starting sequential analysis of %d commits", len(commits))
+	// ========================================================================
+	// TWO-PHASE ANALYSIS: Separates git operations from LLM calls
+	// Phase 1: Extract diffs sequentially (go-git is NOT thread-safe)
+	// Phase 2: Call LLM in parallel (Gemini API IS thread-safe)
+	// ========================================================================
+
+	// Phase 1: Extract all diffs sequentially
+	log.Printf("Phase 1: Extracting diffs from %d commits (sequential)", len(commits))
+	diffContexts := make([]*analyzer.CommitDiffContext, len(commits))
 
 	for i, c := range commits {
-		msg := fmt.Sprintf("Analyzing commit %d/%d: %s", i+1, len(commits), c.Hash.String()[:8])
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		msg := fmt.Sprintf("Extracting diffs %d/%d: %s", i+1, len(commits), c.Hash.String()[:8])
 		log.Println(msg)
 		if progress != nil {
 			progress(msg)
 		}
 
-		// Check for cancellation
-		select {
-		case <-ctx.Done():
-			log.Printf("Commit %s: cancelled", c.Hash.String()[:8])
+		diffCtx, err := analyzer.ExtractDiffs(repo, c, headCommit)
+		if err != nil {
+			log.Printf("Commit %s: failed to extract diffs - %v", c.Hash.String()[:8], err)
+			// Store nil to mark as error, will be handled in phase 2
+			diffContexts[i] = nil
+			continue
+		}
+		diffContexts[i] = diffCtx
+
+		if diffCtx.Skipped {
+			log.Printf("Commit %s: SKIPPED (no relevant changes)", c.Hash.String()[:8])
+		}
+	}
+
+	// Phase 2: Analyze with LLM in parallel
+	log.Printf("Phase 2: Analyzing %d commits with LLM (parallel, %d workers)", len(commits), input.Concurrency)
+	results := make([]*commitResultInternal, len(commits))
+
+	// Use semaphore for concurrency control
+	sem := make(chan struct{}, input.Concurrency)
+	var wg sync.WaitGroup
+
+	for i, diffCtx := range diffContexts {
+		// Handle extraction errors
+		if diffCtx == nil {
 			results[i] = &commitResultInternal{
 				index:  i,
-				commit: c,
-				err:    ctx.Err(),
+				commit: commits[i],
+				err:    fmt.Errorf("diff extraction failed"),
 			}
 			continue
-		default:
 		}
 
-		// Perform analysis with retry
-		var res *analyzer.AnalysisResult
-		err := analyzer.WithRetry(ctx, analyzer.DefaultRetryConfig(), func() error {
-			var analyzeErr error
-			res, analyzeErr = analyzer.AnalyzeCommit(ctx, repo, c, headCommit, input.ErrorMessage, model)
-			return analyzeErr
-		})
+		// Skip commits with no relevant changes (already logged in phase 1)
+		if diffCtx.Skipped {
+			results[i] = &commitResultInternal{
+				index:  i,
+				commit: diffCtx.Commit,
+				result: &analyzer.AnalysisResult{Skipped: true},
+			}
+			continue
+		}
 
-		if err != nil {
-			log.Printf("Commit %s: ERROR - %v", c.Hash.String()[:8], err)
-		} else if res != nil && res.Skipped {
-			log.Printf("Commit %s: SKIPPED (no relevant changes)", c.Hash.String()[:8])
-		} else if res != nil {
-			msg := fmt.Sprintf("Commit %s: %s probability", c.Hash.String()[:8], res.Probability)
+		wg.Add(1)
+		sem <- struct{}{} // Acquire semaphore
+
+		go func(idx int, dc *analyzer.CommitDiffContext) {
+			defer wg.Done()
+			defer func() { <-sem }() // Release semaphore
+
+			// Check for cancellation
+			select {
+			case <-ctx.Done():
+				results[idx] = &commitResultInternal{
+					index:  idx,
+					commit: dc.Commit,
+					err:    ctx.Err(),
+				}
+				return
+			default:
+			}
+
+			msg := fmt.Sprintf("Analyzing commit %s with LLM", dc.Commit.Hash.String()[:8])
 			log.Println(msg)
 			if progress != nil {
 				progress(msg)
 			}
-		}
 
-		results[i] = &commitResultInternal{
-			index:  i,
-			commit: c,
-			result: res,
-			err:    err,
-		}
+			// Create a context with timeout for the request
+			reqCtx, cancel := context.WithTimeout(ctx, cfg.LLM.Timeout)
+			defer cancel()
+
+			// Perform LLM analysis with retry
+			var res *analyzer.AnalysisResult
+			err := analyzer.WithRetry(reqCtx, analyzer.DefaultRetryConfig(), func() error {
+				var analyzeErr error
+				res, analyzeErr = analyzer.AnalyzeWithDiffs(reqCtx, dc, input.ErrorMessage, model)
+				return analyzeErr
+			})
+
+			if err != nil {
+				log.Printf("Commit %s: ERROR - %v", dc.Commit.Hash.String()[:8], err)
+			} else if res != nil {
+				resultMsg := fmt.Sprintf("Commit %s: %s probability", dc.Commit.Hash.String()[:8], res.Probability)
+				log.Println(resultMsg)
+				if progress != nil {
+					progress(resultMsg)
+				}
+			}
+
+			results[idx] = &commitResultInternal{
+				index:  idx,
+				commit: dc.Commit,
+				result: res,
+				err:    err,
+			}
+		}(i, diffCtx)
 	}
 
+	wg.Wait()
 	log.Printf("All commits analyzed")
 
 	// Build output
 	output := &AnalyzeOutput{
 		Results: make([]CommitResult, 0, len(commits)),
-		Summary: AnalyzeSummary{Total: len(commits)},
+		Summary: AnalyzeSummary{
+			Total:    len(commits),
+			Duration: time.Since(startTime).String(),
+			Model:    modelName,
+		},
 	}
 
 	for _, r := range results {
@@ -262,7 +349,7 @@ func AnalyzeRootCause(ctx context.Context, input AnalyzeInput, progress func(str
 
 		output.Results = append(output.Results, CommitResult{
 			Hash:        r.commit.Hash.String()[:8],
-			Message:     analyzer.TruncateCommitMessage(r.commit.Message, 80),
+			Message:     analyzer.TruncateCommitMessage(r.commit.Message, cfg.Output.CommitMessageMaxLength),
 			Probability: string(r.result.Probability),
 			Reasoning:   r.result.Reasoning,
 		})
@@ -295,6 +382,8 @@ func FormatResultsAsText(output *AnalyzeOutput) string {
 
 	sb.WriteString("## Summary\n\n")
 	sb.WriteString(fmt.Sprintf("- **Total commits analyzed:** %d\n", output.Summary.Total))
+	sb.WriteString(fmt.Sprintf("- **Model:** %s\n", output.Summary.Model))
+	sb.WriteString(fmt.Sprintf("- **Duration:** %s\n", output.Summary.Duration))
 	sb.WriteString(fmt.Sprintf("- **High probability:** %d\n", output.Summary.High))
 	sb.WriteString(fmt.Sprintf("- **Medium probability:** %d\n", output.Summary.Medium))
 	sb.WriteString(fmt.Sprintf("- **Low probability:** %d\n", output.Summary.Low))

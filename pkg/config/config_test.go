@@ -14,6 +14,9 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.LLM.Provider != "gemini" {
 		t.Errorf("Expected default provider 'gemini', got %s", cfg.LLM.Provider)
 	}
+	if cfg.LLM.Model != "gemini-flash-latest" {
+		t.Errorf("Expected default model 'gemini-flash-latest', got %s", cfg.LLM.Model)
+	}
 	if cfg.LLM.Temperature != 0.1 {
 		t.Errorf("Expected default temperature 0.1, got %f", cfg.LLM.Temperature)
 	}
@@ -303,4 +306,57 @@ llm:
 	if err == nil {
 		t.Error("LoadConfig should return error for invalid YAML")
 	}
+}
+
+func TestLoadConfigShortPath(t *testing.T) {
+	// Test that short paths don't cause panic
+	tests := []string{
+		"~",  // 1 char
+		"a",  // 1 char
+		"ab", // 2 chars, not starting with ~/
+		"/",  // 1 char
+	}
+
+	for _, path := range tests {
+		t.Run(path, func(t *testing.T) {
+			// Should not panic, may return error or defaults
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("LoadConfig(%q) panicked: %v", path, r)
+				}
+			}()
+
+			_, _ = LoadConfig(path)
+		})
+	}
+}
+
+func TestSaveConfigEmptyPath(t *testing.T) {
+	cfg := DefaultConfig()
+
+	// Empty path should return error
+	err := SaveConfig(cfg, "")
+	if err == nil {
+		t.Error("SaveConfig with empty path should return error")
+	}
+}
+
+func TestSaveConfigShortPath(t *testing.T) {
+	cfg := DefaultConfig()
+
+	// Test that short paths don't cause panic
+	// Note: We only test "~" which will try to save to a file named "~"
+	// We clean up the file after the test
+	path := "~"
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("SaveConfig to %q panicked: %v", path, r)
+		}
+		// Clean up the file if it was created
+		os.Remove(path)
+	}()
+
+	// May return error but should not panic
+	_ = SaveConfig(cfg, path)
 }

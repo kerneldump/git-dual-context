@@ -90,9 +90,9 @@ func DefaultConfig() *Config {
 	return &Config{
 		LLM: LLMConfig{
 			Provider:    "gemini",
-			Model:       "gemini-3-pro-preview",
+			Model:       "gemini-flash-latest",
 			Temperature: 0.1,
-			Timeout:     5 * time.Minute,
+			Timeout:     10 * time.Minute,
 		},
 		Analysis: AnalysisConfig{
 			DefaultCommits:   5,
@@ -125,7 +125,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	// Expand home directory
-	if path[:2] == "~/" {
+	if len(path) >= 2 && path[:2] == "~/" {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get home directory: %w", err)
@@ -152,8 +152,12 @@ func LoadConfig(path string) (*Config, error) {
 
 // SaveConfig saves configuration to a YAML file
 func SaveConfig(cfg *Config, path string) error {
+	if path == "" {
+		return fmt.Errorf("config path cannot be empty")
+	}
+
 	// Expand home directory
-	if path[:2] == "~/" {
+	if len(path) >= 2 && path[:2] == "~/" {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return fmt.Errorf("failed to get home directory: %w", err)

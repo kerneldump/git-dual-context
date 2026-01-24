@@ -58,11 +58,14 @@ go build -o mcp-server ./cmd/mcp-server
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `GEMINI_API_KEY` | Yes | - | Google Gemini API key |
-| `GEMINI_MODEL` | No | `gemini-3-pro-preview` | Gemini model to use |
+| `GEMINI_MODEL` | No | `gemini-flash-latest` | Gemini model to use |
+
+### Running the Server
 
 ```bash
-export GEMINI_API_KEY="your-api-key-here"
-export GEMINI_MODEL="gemini-3-pro-preview"  # optional
+export GEMINI_API_KEY="your-api-key"
+export GEMINI_MODEL="gemini-flash-latest"  # optional
+./mcp-server
 ```
 
 ## Usage with Gemini-CLI

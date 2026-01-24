@@ -12,6 +12,8 @@ const (
 	MaxDiffSize = 50000
 	// TruncationMarker is appended when diffs are truncated
 	TruncationMarker = "\n... [truncated: diff too large] ...\n"
+	// defaultDiffBufferSize is the pre-allocation size for diff string builders
+	defaultDiffBufferSize = 8192
 )
 
 // TruncateDiff limits diff size to prevent context window overflow
@@ -56,17 +58,20 @@ func GetStandardDiff(c, parent *object.Commit) (string, []string, error) {
 	}
 
 	// Diff parent -> commit
-	// For the first commit (no parent), pTree will be nil and Patch handles it correctly
-	if pTree == nil && parent != nil {
-		return "", nil, fmt.Errorf("parent tree is nil despite parent commit existing")
-	}
-	patch, err := pTree.Patch(cTree)
+	// For the first commit (no parent), pTree will be nil
+	// Use DiffTree which handles nil trees correctly (treats as empty tree)
+	changes, err := object.DiffTree(pTree, cTree)
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("failed to diff trees: %w", err)
+	}
+
+	patch, err := changes.Patch()
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to generate patch: %w", err)
 	}
 
 	var sb strings.Builder
-	sb.Grow(8192) // Pre-allocate 8KB for typical diffs
+	sb.Grow(defaultDiffBufferSize)
 	var files []string
 
 	for _, fp := range patch.FilePatches() {
@@ -143,7 +148,7 @@ func GetFullDiff(c, head *object.Commit, filterFiles []string) (string, error) {
 	}
 
 	var sb strings.Builder
-	sb.Grow(8192) // Pre-allocate 8KB for typical diffs
+	sb.Grow(defaultDiffBufferSize)
 
 	for _, fp := range patch.FilePatches() {
 		from, to := fp.Files()

@@ -215,3 +215,100 @@ Also checking for edge cases like {}.
 		t.Errorf("expected LOW, got %v", res.Probability)
 	}
 }
+
+func TestFindJSONBlockRegexFallback(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		wantProb    string
+		shouldParse bool
+	}{
+		{
+			name: "trailing text after JSON",
+			input: `Here is my analysis:
+{"probability": "HIGH", "reasoning": "found the bug"}
+Some trailing explanation text here.`,
+			wantProb:    "HIGH",
+			shouldParse: true,
+		},
+		{
+			name: "multiple JSON blocks - last valid wins",
+			input: `First attempt: {"probability": "LOW", "reasoning": "maybe not"}
+After more analysis: {"probability": "HIGH", "reasoning": "definitely the bug"}`,
+			wantProb:    "HIGH",
+			shouldParse: true,
+		},
+		{
+			name:        "no JSON at all",
+			input:       "This response has no JSON whatsoever.",
+			shouldParse: false,
+		},
+		{
+			name: "JSON without probability field",
+			input: `{"other": "value", "no_probability": true}`,
+			shouldParse: false,
+		},
+		{
+			name: "compact JSON",
+			input: `{"probability":"MEDIUM","reasoning":"test"}`,
+			wantProb:    "MEDIUM",
+			shouldParse: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := FindJSONBlock(tt.input)
+
+			if !tt.shouldParse {
+				if result != "" {
+					t.Errorf("expected empty result, got: %s", result)
+				}
+				return
+			}
+
+			if result == "" {
+				t.Fatal("expected to find JSON block, got empty string")
+			}
+
+			var parsed AnalysisResult
+			if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+				t.Fatalf("failed to parse extracted JSON: %v, extracted: %s", err, result)
+			}
+
+			if string(parsed.Probability) != tt.wantProb {
+				t.Errorf("expected probability %s, got %s", tt.wantProb, parsed.Probability)
+			}
+		})
+	}
+}
+
+func TestAnalysisPromptTemplateLoaded(t *testing.T) {
+	// Verify the embedded prompt template is loaded
+	if analysisPromptTemplate == "" {
+		t.Fatal("analysisPromptTemplate should not be empty")
+	}
+
+	// Verify it contains expected placeholders
+	expectedPlaceholders := []string{"%s"}
+	for _, ph := range expectedPlaceholders {
+		if !strings.Contains(analysisPromptTemplate, ph) {
+			t.Errorf("prompt template missing placeholder: %s", ph)
+		}
+	}
+
+	// Verify it contains key sections
+	expectedSections := []string{
+		"SKEPTIC PERSONA",
+		"BUG DESCRIPTION",
+		"COMMIT CONTEXT",
+		"STANDARD DIFF",
+		"FULL COMPARISON DIFF",
+		"probability",
+	}
+	for _, section := range expectedSections {
+		if !strings.Contains(analysisPromptTemplate, section) {
+			t.Errorf("prompt template missing section: %s", section)
+		}
+	}
+}

@@ -1,0 +1,58 @@
+# git-dual-context configuration
+#
+# This file is loaded automatically from these locations (in order):
+#   1. .git-dual-context.yaml (current directory)
+#   2. ~/.config/git-dual-context/config.yaml
+#   3. ~/.git-dual-context.yaml
+#
+# Copy this file to one of those locations to customize settings.
+
+# LLM settings
+llm:
+  # Provider: gemini (only gemini supported currently)
+  provider: gemini
+  
+# Gemini model to use
+model: gemini-flash-latest
+  
+  # Temperature (0.0 = deterministic, 1.0 = creative)
+  # Lower values recommended for bug analysis
+  temperature: 0.1
+  
+  # Timeout per commit analysis
+  timeout: 10m
+# Analysis settings
+analysis:
+  # Number of commits to analyze by default
+  default_commits: 5
+  
+  # Maximum diff size in characters (truncated if exceeded)
+  max_diff_size: 50000
+  
+  # Skip merge commits (they typically don't introduce bugs directly)
+  skip_merge_commits: true
+
+# Performance settings
+performance:
+  # Number of concurrent workers for parallel processing
+  workers: 5
+  
+  # Maximum retry attempts for failed API calls
+  max_retries: 3
+  
+  # Base delay for exponential backoff
+  retry_base_delay: 1s
+  
+  # Maximum delay between retries
+  retry_max_delay: 30s
+
+# Output settings
+output:
+  # Output format: json, text, markdown
+  format: json
+  
+  # Enable verbose logging
+  verbose: false
+  
+  # Maximum length for commit messages in output
+  commit_message_max_length: 80

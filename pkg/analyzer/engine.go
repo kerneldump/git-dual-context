@@ -2,8 +2,10 @@ package analyzer
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,6 +15,15 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/generative-ai-go/genai"
 )
+
+//go:embed prompts/analysis.txt
+var analysisPromptTemplate string
+
+// LLMModel is an interface for LLM interaction, allowing for mocking in tests
+// and abstracting different provider-specific implementations.
+type LLMModel interface {
+	GenerateContent(ctx context.Context, parts ...genai.Part) (*genai.GenerateContentResponse, error)
+}
 
 // Probability represents the likelihood of a commit causing a bug
 type Probability string
@@ -67,8 +78,10 @@ type Summary struct {
 	Medium  int    `json:"medium"`
 	Low     int    `json:"low"`
 	Skipped int    `json:"skipped"`
-	Errors  int    `json:"errors"`
-}
+		Errors   int    `json:"errors"`
+		Duration string `json:"duration"`
+		Model    string `json:"model"`
+	}
 
 // LogEntry represents a structured log message
 type LogEntry struct {
@@ -93,14 +106,15 @@ func (ar *AnalysisResult) ToJSONResult(hash string, message string) JSONResult {
 	return JSONResult{
 		Type:        "result",
 		Hash:        hash,
-		Message:     TruncateCommitMessage(message, 80),
+		Message:     TruncateCommitMessage(message, DefaultCommitMessageMaxLength),
 		Probability: ar.Probability,
 		Reasoning:   ar.Reasoning,
 	}
 }
 
-// AnalyzeCommit performs the dual-context analysis on a single commit
-func AnalyzeCommit(ctx context.Context, r *git.Repository, c, headCommit *object.Commit, errorMsg string, model *genai.GenerativeModel) (*AnalysisResult, error) {
+// AnalyzeCommit performs the dual-context analysis on a single commit.
+// The model parameter accepts any LLMModel implementation (including *genai.GenerativeModel).
+func AnalyzeCommit(ctx context.Context, r *git.Repository, c, headCommit *object.Commit, errorMsg string, model LLMModel) (*AnalysisResult, error) {
 	// 1. Standard Diff (C vs Parent)
 	// For the very first commit, parent is empty. Handle gracefully.
 	var parent *object.Commit
@@ -167,89 +181,141 @@ func AnalyzeCommit(ctx context.Context, r *git.Repository, c, headCommit *object
 
 // BuildPrompt constructs the multi-step analytical prompt for the LLM.
 // It incorporates the bug description, commit diffs, and the skeptical persona instructions.
+// The prompt template is loaded from prompts/analysis.txt via go:embed.
 func BuildPrompt(errorMsg string, c *object.Commit, stdDiff, fullDiff string) string {
-	return fmt.Sprintf(`
-You are an expert software debugger and a rigorous technical skeptic. Your goal is to determine if a specific commit introduced the bug described below.
-
-SKEPTIC PERSONA:
-You must actively attempt to DISPROVE that this commit caused the bug. Assume the commit is safe unless you find a "smoking gun" (e.g., direct logic contradiction, enabling a path for an invalid value, removing a critical guard). If the evidence is circumstantial or the logic is merely "suspicious" but not demonstrably broken, you must lean towards a LOWER probability.
-
-BUG DESCRIPTION:
-%s
-
-COMMIT CONTEXT:
-Hash: %s
-Message: %s
-
----
-INPUT DATA:
-
-1. STANDARD DIFF (The immediate changes in this commit):
-%s
-
-2. FULL COMPARISON DIFF (Evolution from this commit to HEAD):
-%s
-
----
-INSTRUCTIONS:
-
-Follow this rigorous analytical process. You must output your reasoning for each step.
-
-GLOBAL INSTRUCTION: Value Tracing
-Identify any specific numeric values or state-related terms in the BUG DESCRIPTION (e.g., "-2"). You MUST explicitly trace how these values could originate from or be affected by the logic in the provided diffs.
-
-STEP 0: HYPOTHESIS GENERATION
-Based ONLY on the BUG DESCRIPTION, what are the most likely technical causes for this error? List 2-3 potential scenarios where this error could manifest.
-
-STEP 1: MICRO-ANALYSIS (Skeptical Review)
-Analyze the Standard Diff. What logic changed? Does it DIRECTLY produce the error? Look for unmasked paths where a previously ignored bad value can now reach a validation point.
-
-STEP 2: MACRO-ANALYSIS (Evolutionary Context)
-Analyze the Full Comparison Diff. Does the code from this commit still exist in HEAD? Was it refactored in a way that introduced the bug later? Does it conflict with the current system state?
-
-STEP 3: CLASSIFICATION
-Classify the probability based on these strict definitions:
-- HIGH: You found a "smoking gun." The commit contains logic that DIRECTLY contradicts the error message or enables the specific bug.
-- MEDIUM: The commit modifies relevant subsystems/variables and creates a plausible, though not certain, path for the bug. Warrants manual review.
-- LOW: No direct or plausible link found. The change is unrelated or the skeptic's doubts remain unaddressed.
-
----
-OUTPUT FORMAT:
-
-Hypothesis: <Potential causes based on description>
-Reasoning: <Step-by-Step Tracing and Analysis>
-Classification: <HIGH|MEDIUM|LOW>
-
-Finally, return the result in this JSON format (do not use markdown blocks):
-{
-  "probability": "HIGH|MEDIUM|LOW",
-  "reasoning": "A concise summary of your tracing and verdict."
-}
-`, errorMsg, c.Hash.String(), c.Message, stdDiff, fullDiff)
+	return fmt.Sprintf(analysisPromptTemplate, errorMsg, c.Hash.String(), c.Message, stdDiff, fullDiff)
 }
 
-// FindJSONBlock attempts to find the largest valid JSON object in the text.
-// It scans from the last '}' backwards to find a matching '{'.
-func FindJSONBlock(text string) string {
-	end := strings.LastIndex(text, "}")
-	if end == -1 {
-		return ""
+// CommitDiffContext holds pre-extracted diff data for a commit.
+// This allows separating git operations (not thread-safe) from LLM calls (thread-safe).
+type CommitDiffContext struct {
+	Commit        *object.Commit
+	StandardDiff  string
+	FullDiff      string
+	ModifiedFiles []string
+	Skipped       bool // true if no relevant files were modified
+}
+
+// ExtractDiffs extracts the dual-context diffs from a commit.
+// This function performs git operations and is NOT thread-safe with go-git.
+// Call this sequentially, then use AnalyzeWithDiffs for parallel LLM calls.
+func ExtractDiffs(r *git.Repository, c, headCommit *object.Commit) (*CommitDiffContext, error) {
+	ctx := &CommitDiffContext{
+		Commit: c,
 	}
 
-	// Simple heuristic: find the last '}' and the first '{' before it
-	// But simply finding the first '{' might match too early (e.g. nested braces in reasoning text).
-	// So we can try to parse from every '{' found before 'end' until we succeed.
-
-	// Optimization: Start searching for '{' from the end backwards.
-	for start := strings.LastIndex(text[:end], "{"); start != -1; start = strings.LastIndex(text[:start], "{") {
-		candidate := text[start : end+1]
-		// Fast check: does it look like our schema?
-		if !strings.Contains(candidate, "\"probability\"") {
-			continue
+	// 1. Standard Diff (C vs Parent)
+	var parent *object.Commit
+	if len(c.ParentHashes) > 0 {
+		var err error
+		parent, err = c.Parent(0)
+		if err != nil {
+			return nil, fmt.Errorf("getting parent commit for %s: %w", c.Hash.String()[:8], err)
 		}
+	}
+
+	stdDiff, modifiedFiles, err := gitdiff.GetStandardDiff(c, parent)
+	if err != nil {
+		return nil, fmt.Errorf("getting standard diff: %w", err)
+	}
+
+	if len(modifiedFiles) == 0 {
+		ctx.Skipped = true
+		return ctx, nil
+	}
+
+	ctx.StandardDiff = stdDiff
+	ctx.ModifiedFiles = modifiedFiles
+
+	// 2. Full Comparison Diff (C vs HEAD)
+	fullDiff, err := gitdiff.GetFullDiff(c, headCommit, modifiedFiles)
+	if err != nil {
+		return nil, fmt.Errorf("getting full diff: %w", err)
+	}
+	ctx.FullDiff = fullDiff
+
+	return ctx, nil
+}
+
+// AnalyzeWithDiffs performs LLM analysis using pre-extracted diffs.
+// This function is thread-safe and can be called concurrently.
+// The model parameter accepts any LLMModel implementation (including *genai.GenerativeModel).
+func AnalyzeWithDiffs(ctx context.Context, diffCtx *CommitDiffContext, errorMsg string, model LLMModel) (*AnalysisResult, error) {
+	if diffCtx.Skipped {
+		return &AnalysisResult{Skipped: true}, nil
+	}
+
+	// Build prompt with pre-extracted diffs
+	prompt := BuildPrompt(errorMsg, diffCtx.Commit, diffCtx.StandardDiff, diffCtx.FullDiff)
+
+	// Call Gemini (thread-safe)
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return nil, fmt.Errorf("gemini api call: %w", err)
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return nil, fmt.Errorf("empty response from gemini for commit %s", diffCtx.Commit.Hash.String()[:8])
+	}
+
+	// Parse Response
+	var result AnalysisResult
+	found := false
+
+	for _, part := range resp.Candidates[0].Content.Parts {
+		if txt, ok := part.(genai.Text); ok {
+			found = true
+			cleanTxt := FindJSONBlock(string(txt))
+			if cleanTxt == "" {
+				return nil, fmt.Errorf("no JSON found in response for %s", diffCtx.Commit.Hash.String()[:8])
+			}
+			if err := json.Unmarshal([]byte(cleanTxt), &result); err != nil {
+				return nil, fmt.Errorf("parsing JSON for %s: %v. Raw: %s", diffCtx.Commit.Hash.String()[:8], err, string(txt))
+			}
+			break
+		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("no text content in gemini response for %s", diffCtx.Commit.Hash.String()[:8])
+	}
+
+	return &result, nil
+}
+
+// jsonFallbackRegex is used as a fallback for extracting JSON when brace matching fails.
+// Compiled once at package initialization for efficiency.
+var jsonFallbackRegex = regexp.MustCompile(`(?s)\{[^{}]*"probability"\s*:\s*"[^"]*"[^{}]*\}`)
+
+// FindJSONBlock attempts to find the largest valid JSON object in the text.
+// It uses a two-strategy approach:
+// 1. First tries scanning from the last '}' backwards to find matching '{'
+// 2. Falls back to regex matching if the first strategy fails
+func FindJSONBlock(text string) string {
+	// Strategy 1: Brace matching from end backwards
+	end := strings.LastIndex(text, "}")
+	if end != -1 {
+		for start := strings.LastIndex(text[:end], "{"); start != -1; start = strings.LastIndex(text[:start], "{") {
+			candidate := text[start : end+1]
+			// Fast check: does it look like our schema?
+			if strings.Contains(candidate, "\"probability\"") {
+				var js map[string]interface{}
+				if json.Unmarshal([]byte(candidate), &js) == nil {
+					return candidate
+				}
+			}
+		}
+	}
+
+	// Strategy 2: Regex fallback for edge cases
+	// Handles cases where there might be trailing text after the last '}'
+	// or multiple JSON blocks where the last one is malformed.
+	matches := jsonFallbackRegex.FindAllString(text, -1)
+	// Try matches from last to first
+	for i := len(matches) - 1; i >= 0; i-- {
 		var js map[string]interface{}
-		if json.Unmarshal([]byte(candidate), &js) == nil {
-			return candidate
+		if json.Unmarshal([]byte(matches[i]), &js) == nil {
+			return matches[i]
 		}
 	}
 

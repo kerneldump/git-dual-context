@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/kerneldump/git-dual-context/pkg/analyzer"
+	"github.com/kerneldump/git-dual-context/pkg/config"
 	"github.com/kerneldump/git-dual-context/pkg/validator"
 
 	"github.com/go-git/go-git/v5"
@@ -122,18 +123,20 @@ func (p *orderedPrinter) printResult(r *commitResult) {
 }
 
 // summary returns the final summary
-func (p *orderedPrinter) summary() analyzer.Summary {
+func (p *orderedPrinter) summary(duration time.Duration, modelName string) analyzer.Summary {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	return analyzer.Summary{
-		Type:    "summary",
-		Total:   p.total,
-		High:    p.high,
-		Medium:  p.medium,
-		Low:     p.low,
-		Skipped: p.skipped,
-		Errors:  p.errors,
+		Type:     "summary",
+		Total:    p.total,
+		High:     p.high,
+		Medium:   p.medium,
+		Low:      p.low,
+		Skipped:  p.skipped,
+		Errors:   p.errors,
+		Duration: duration.String(),
+		Model:    modelName,
 	}
 }
 
@@ -145,17 +148,25 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Parse flags first
+	// Load config file (uses defaults if not found)
+	cfg, _ := config.LoadConfig(config.FindConfigFile())
+
+	// Env var overrides config (but flag overrides both)
+	if envModel := os.Getenv("GEMINI_MODEL"); envModel != "" {
+		cfg.LLM.Model = envModel
+	}
+
+	// Parse flags with defaults from config
 	repoPath := flag.String("repo", ".", "Path to the git repository or remote URL")
 	branch := flag.String("branch", "", "Branch to analyze (default: current HEAD)")
 	errorMsg := flag.String("error", "", "The error message or bug description to analyze")
-	numCommits := flag.Int("n", 5, "Number of commits to analyze")
-	numWorkers := flag.Int("j", 3, "Number of concurrent workers")
-	modelName := flag.String("model", "models/gemini-3-pro-preview", "Gemini model to use")
-	timeout := flag.Duration("timeout", 5*time.Minute, "Timeout per commit analysis")
+	numCommits := flag.Int("n", cfg.Analysis.DefaultCommits, "Number of commits to analyze")
+	numWorkers := flag.Int("j", cfg.Performance.Workers, "Number of concurrent workers")
+	modelName := flag.String("model", cfg.LLM.Model, "Gemini model to use")
+	timeout := flag.Duration("timeout", cfg.LLM.Timeout, "Timeout per commit analysis")
 	outputFile := flag.String("o", "", "Output file path (default: stdout)")
 	apiKey := flag.String("apikey", "", "Google Gemini API Key (prefer GEMINI_API_KEY env var)")
-	verbose := flag.Bool("v", false, "Verbose output (show additional debug info)")
+	verbose := flag.Bool("v", cfg.Output.Verbose, "Verbose output (show additional debug info)")
 	flag.Parse()
 
 	// Set up output writer
@@ -279,7 +290,9 @@ func main() {
 	defer client.Close()
 
 	model := client.GenerativeModel(*modelName)
-	model.SetTemperature(0.1)
+	model.SetTemperature(cfg.LLM.Temperature)
+	
+	logJSON("INFO", fmt.Sprintf("Using LLM model: %s", *modelName))
 
 	if *verbose {
 		logJSON("DEBUG", fmt.Sprintf("Using model: %s, timeout: %v", *modelName, *timeout))
@@ -316,6 +329,8 @@ func main() {
 		commits = append(commits, c)
 		count++
 	}
+
+	startTime := time.Now()
 
 	// Parallel Processing with ordered streaming output
 	printer := newOrderedPrinter(encoder, len(commits))
@@ -383,7 +398,7 @@ func main() {
 	}
 
 	// Output summary
-	if err := encoder.Encode(printer.summary()); err != nil {
+	if err := encoder.Encode(printer.summary(time.Since(startTime), *modelName)); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to encode summary: %v\n", err)
 	}
 }

@@ -73,8 +73,8 @@ go build -o git-commit-analysis ./cmd/git-commit-analysis
 | `-error` | (required) | The error message or bug description to analyze |
 | `-n` | `5` | Number of commits to analyze |
 | `-j` | `3` | Number of concurrent workers |
-| `-model` | `models/gemini-3-pro-preview` | Gemini model to use |
-| `-timeout` | `5m` | Timeout per commit analysis |
+| `-model` | `models/gemini-flash-latest` | Gemini model to use |
+| `-timeout` | `10m` | Timeout per commit analysis |
 | `-o` | stdout | Output file path |
 | `-apikey` | env `GEMINI_API_KEY` | Google Gemini API Key |
 | `-v` | `false` | Verbose output (debug info) |

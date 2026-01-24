@@ -10,9 +10,9 @@ llm:
   provider: gemini
 
   # Model to use for analysis
-  # Gemini: gemini-3-pro-preview, gemini-1.5-pro, gemini-1.5-flash
-  # OpenAI: gpt-4, gpt-4-turbo (future support)
-  model: gemini-3-pro-preview
+  # Gemini: gemini-flash-latest, gemini-3-pro-preview, gemini-1.5-pro, gemini-1.5-flash
+# Default: gemini-flash-latest
+model: gemini-flash-latest
 
   # API key (can also be set via environment variable)
   # Recommended: Use GEMINI_API_KEY environment variable instead
@@ -22,9 +22,8 @@ llm:
   # Lower = more deterministic, Higher = more creative
   temperature: 0.1
 
-  # Timeout for each LLM request
-  # Valid units: s (seconds), m (minutes), h (hours)
-  timeout: 5m
+# Timeout for each LLM request
+timeout: 10m
 
 # Analysis Configuration
 analysis:

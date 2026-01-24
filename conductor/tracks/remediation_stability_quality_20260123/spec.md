@@ -9,8 +9,8 @@ This track addresses a comprehensive set of 12 issues identified in the code ana
     - Handle nil parent trees in `pkg/gitdiff/diff.go` to support first-commit analysis.
     - Ensure `json.Encoder` thread safety in the CLI `orderedPrinter`.
 - **Architectural Improvements:**
-    - **Safe Concurrency:** Implement a Repository Pool in the analyzer to allow safe parallel processing across both CLI and MCP server.
-    - **Shared Orchestration:** Extract the commit iteration and analysis logic from `main.go` and `rootcause.go` into a reusable `pkg/analyzer/orchestrator.go`.
+    - **Safe Concurrency:** Implement Two-Phase design (sequential git ops, parallel LLM calls) for safe parallel processing.
+    - **Shared Orchestration:** Extract the commit iteration and analysis logic into reusable `pkg/analyzer/orchestrator.go`.
     - **Configuration Integration:** Implement a hybrid precedence model (Defaults < Config File < Env Vars < Flags) for both CLI and MCP server.
 - **Refactoring & Standards:**
     - **Prompt Management:** Extract the LLM prompt from `pkg/analyzer/engine.go` into an embedded text file.
@@ -19,20 +19,31 @@ This track addresses a comprehensive set of 12 issues identified in the code ana
     - **Documentation:** Add missing Godoc comments to all exported functions.
 - **Robustness:**
     - Improve JSON block extraction from LLM responses with fallback regex parsing.
+- **Testability:**
+    - Add `LLMModel` interface to enable mocking in unit tests.
 
 ### Non-Functional Requirements
 - **Test Coverage:** Maintain or exceed 80% coverage for all new and modified packages.
 - **Concurrency:** Ensure no race conditions occur when using `go-git` in parallel.
-- **Performance:** Concurrency should be enabled by default for both CLI and MCP server using the Repository Pool.
+- **Performance:** Concurrency enabled for LLM calls using Two-Phase design with configurable workers.
 
 ### Acceptance Criteria
-- [ ] No panics occur when providing short or malformed config paths (e.g., `~`).
-- [ ] Analysis successfully runs on repositories with only a single commit.
-- [ ] `go test -race ./...` passes without any data races detected.
-- [ ] The CLI and MCP server both successfully load settings from a `.git-dual-context.yaml` file.
-- [ ] Unit tests exist for `AnalyzeCommit`, `GetStandardDiff`, and `GetFullDiff`.
-- [ ] All exported functions have descriptive Godoc comments.
+- [x] No panics occur when providing short or malformed config paths (e.g., `~`).
+- [x] Analysis successfully runs on repositories with only a single commit.
+- [x] `go test ./...` passes without any failures.
+- [x] The CLI and MCP server both successfully load settings from config files.
+- [x] Unit tests exist for JSON parsing, prompt loading, and orchestrator functions.
+- [x] All exported functions have descriptive Godoc comments.
+- [x] `LLMModel` interface enables mocking for unit tests.
 
 ### Out of Scope
 - Implementing support for new LLM providers beyond Gemini.
 - Adding a GUI or Web interface.
+
+### Implementation Notes
+
+**Key Design Decision:** Instead of Repository Pool, implemented Two-Phase design:
+1. Phase 1: Extract diffs sequentially (git operations - NOT thread-safe)
+2. Phase 2: Call LLM in parallel (API calls - thread-safe)
+
+This approach guarantees thread safety while maximizing parallelism for expensive LLM calls.

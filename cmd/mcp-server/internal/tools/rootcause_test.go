@@ -35,9 +35,11 @@ func TestFormatResultsAsText(t *testing.T) {
 			Medium:  1,
 			Low:     1,
 			Skipped: 2,
-			Errors:  0,
-		},
-	}
+						Errors:   0,
+						Duration: "1m2s",
+						Model:    "gemini-flash-latest",
+					},
+				}
 
 	text := FormatResultsAsText(output)
 
@@ -89,6 +91,12 @@ func TestFormatResultsAsText(t *testing.T) {
 	}
 	if !strings.Contains(text, "Skipped (no code changes):** 2") {
 		t.Error("Output should contain skipped count")
+	}
+	if !strings.Contains(text, "Duration:** 1m2s") {
+		t.Error("Output should contain duration")
+	}
+	if !strings.Contains(text, "Model:** gemini-flash-latest") {
+		t.Error("Output should contain model name")
 	}
 }
 
