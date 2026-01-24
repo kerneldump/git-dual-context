@@ -8,30 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Input validation for all user inputs (commit count, workers, branch names, repo paths)
-- Comprehensive test suite for retry logic with exponential backoff
-- Shared utility function `TruncateCommitMessage` to eliminate code duplication
-- Validation package (`pkg/validator`) for security and input sanitization
-- Tests for utility functions in analyzer package
-- Comprehensive concurrency documentation in `docs/CONCURRENCY.md`
-- CONTRIBUTING.md with development guidelines
-- CHANGELOG.md for tracking version changes
+- **Configuration**: Support for YAML configuration files (`config.yaml`) with hybrid precedence (Defaults < Config < Env < Flags)
+- **Observability**: Added `duration` and `model` fields to analysis summary in both CLI and MCP output
+- **Testability**: Introduced `LLMModel` interface to enable mocking of LLM interactions
+- **Validation**: comprehensive input validation package (`pkg/validator`)
+- **Utility**: Shared `TruncateCommitMessage` function
+- **Documentation**: `docs/CONCURRENCY.md` explaining the Two-Phase design
 
 ### Changed
-- Improved error handling for JSON encoding operations in CLI
-- Enhanced defensive programming with nil checks in gitdiff package
-- Refactored message truncation logic to use shared utility
+- **Defaults**: Updated default model to `gemini-flash-latest` and increased timeout to `10m`
+- **Architecture**: Implemented "Two-Phase Analysis" (Sequential Git extraction -> Parallel LLM analysis) to guarantee thread safety while maximizing concurrency
+- **Prompts**: Externalized LLM prompt into embedded `pkg/analyzer/prompts/analysis.txt`
+- **Error Handling**: Improved JSON encoding error reporting in CLI
 
 ### Fixed
-- Fixed ignored error returns from JSON encoding calls
-- Added defensive nil check for parent tree in diff generation
-- Improved error messages for validation failures
+- **Stability**: Fixed panic in config loading with short paths (e.g., `~`)
+- **Stability**: Fixed nil pointer dereference in `gitdiff` when analyzing the first commit (no parent)
+- **Robustness**: Enhanced LLM response parsing with regex fallback to handle malformed JSON
+- **Security**: Added resource limits (commits, workers) and path validation to prevent traversal attacks
 
 ### Security
-- Added maximum limits for commits (1000) and workers (50) to prevent resource exhaustion
-- Added path validation to prevent directory traversal attacks
-- Added branch name sanitization to prevent command injection
-- Added protection against analyzing sensitive system directories
+- Added branch name sanitization
+- Added protection against sensitive system directory analysis
 
 ## [0.1.0] - 2025-01-XX
 
